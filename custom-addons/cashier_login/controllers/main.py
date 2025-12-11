@@ -90,40 +90,13 @@ class CashierLoginController(BaseHome):
                         redirect_url = '/pos/ui'
                         _logger.info(f"No POS config found, redirecting user {user.login} to generic POS UI")
 
-                    # Use JavaScript to redirect with a slight delay to ensure session is established
-                    return request.make_response(f"""
-                    <html>
-                    <head>
-                        <script type="text/javascript">
-                            setTimeout(function() {{
-                                window.location.href = "{redirect_url}";
-                            }}, 500);  // 500ms delay before redirect
-                        </script>
-                    </head>
-                    <body>
-                        <p>Redirecting to POS...</p>
-                        <a href="{redirect_url}">Click here if you are not redirected automatically</a>
-                    </body>
-                    </html>
-                    """)
+                    # Return a response that redirects to the POS
+                    return request.redirect(redirect_url)
                 else:
                     # If user doesn't have POS permissions, redirect to standard backend
                     _logger.info(f"User {user.login} will be redirected to web backend")
-                    # Use JavaScript redirect for consistency
-                    redirect_url = '/web'
-                    return request.make_response(f"""
-                    <html>
-                    <head>
-                        <script type="text/javascript">
-                            window.location.href = "{redirect_url}";
-                        </script>
-                    </head>
-                    <body>
-                        <p>Redirecting to backend...</p>
-                        <a href="{redirect_url}">Click here if you are not redirected automatically</a>
-                    </body>
-                    </html>
-                    """)
+                    # Redirect to standard backend
+                    return request.redirect('/web')
             else:
                 # Authentication failed
                 return request.render('cashier_login.cashier_login', {
