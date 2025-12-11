@@ -4,7 +4,7 @@
         <!-- Cashier Login Template -->
         <template id="cashier_login" name="Cashier Login">
             <t t-call="web.login_layout">
-                <form class="oe_login_form" role="form" method="post">
+                <form class="oe_login_form" role="form" method="post" action="/cashier/login/process">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <t t-set="title" t-value="'Cashier Login'"/>
 
