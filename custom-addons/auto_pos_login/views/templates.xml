@@ -2,7 +2,7 @@
 <odoo>
     <data>
         <!-- Assets Registration -->
-        <template id="assets_backend" name="auto_pos_login assets" inherit_id="web.assets_backend">
+        <template id="assets_backend" name="auto_pos_login assets" inherit_id="web.assets_common">
             <xpath expr="." position="inside">
                 <script type="text/javascript" src="/auto_pos_login/static/src/js/auto_pos_login.js"></script>
             </xpath>
