@@ -1,0 +1,19 @@
+<odoo xmlns:xlink="http://www.w3.org/1999/xlink">
+  <record id="view_product_form_custom" model="ir.ui.view">
+    <field name="name">product.template.form.inherit.custom</field>
+    <field name="model">product.template</field>
+    <field name="inherit_id" ref="product.product_template_form_view"/>
+    <field name="arch" type="xml">
+      <xpath expr="//field[@name='list_price']/ancestor::group[1]" position="after">
+        <group string="Custom Prices" col="2">
+          <field name="price_grosir"/>
+          <field name="price_bon"/>
+        </group>
+        <group string="Status &amp; Notes" col="2">
+          <field name="status_barang"/>
+          <field name="keterangan"/>
+        </group>
+      </xpath>
+    </field>
+  </record>
+</odoo>
