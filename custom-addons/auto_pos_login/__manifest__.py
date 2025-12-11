@@ -16,11 +16,7 @@
     "data": [
         "views/templates.xml",
     ],
-    "assets": {
-        "web.assets_backend": [
-            "auto_pos_login/static/src/js/auto_pos_login.js",
-        ],
-    },
+    "assets": {},
     "demo": [],
     "installable": True,
     "auto_install": False,

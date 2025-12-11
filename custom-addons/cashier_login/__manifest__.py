@@ -16,14 +16,7 @@
     "data": [
         "views/cashier_login_template.xml",
     ],
-    "assets": {
-        "web.assets_backend": [
-            "cashier_login/static/src/js/cashier_login.js",
-        ],
-        "web.assets_common": [
-            "cashier_login/static/src/scss/login_style.scss",
-        ],
-    },
+    "assets": {},
     "demo": [],
     "installable": True,
     "auto_install": False,
