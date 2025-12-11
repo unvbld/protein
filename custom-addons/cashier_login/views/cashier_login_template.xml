@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Cashier Login Template -->
+        <template id="cashier_login" name="Cashier Login">
+            <t t-call="web.login_layout">
+                <form class="oe_login_form" role="form" method="post">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <t t-set="title" t-value="'Cashier Login'"/>
+                    
+                    <div class="text-center mb-3">
+                        <h3>Cashier Login</h3>
+                        <p>Login to access the Point of Sale directly</p>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="login" class="col-form-label">Email/Username</label>
+                        <input type="text" id="login" class="form-control" name="login" t-att-value="login" placeholder="Email or Username" required="required"/>
+                    </div>
+                    
+                    <div class="form-group mb-3">
+                        <label for="password" class="col-form-label">Password</label>
+                        <input type="password" id="password" class="form-control" name="password" placeholder="Password" required="required"/>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" type="submit">Login to POS</button>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <a href="/web/login">Back to Standard Login</a>
+                    </div>
+                    
+                    <t t-if="error">
+                        <div class="alert alert-danger mt-3" role="alert">
+                            <t t-esc="error"/>
+                        </div>
+                    </t>
+                </form>
+            </t>
+        </template>
+        
+        <!-- Assets Registration -->
+        <template id="assets_backend" name="cashier_login assets" inherit_id="web.assets_backend">
+            <xpath expr="." position="inside">
+                <script type="text/javascript" src="/cashier_login/static/src/js/cashier_login.js"></script>
+            </xpath>
+        </template>
+    </data>
+</odoo>
