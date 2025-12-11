@@ -6,6 +6,7 @@
             <t t-call="web.login_layout">
                 <form class="oe_login_form" role="form" method="post" action="/cashier/login/process">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                    <input type="hidden" name="redirect" t-att-value="redirect"/>
                     <t t-set="title" t-value="'Cashier Login'"/>
 
                     <div class="text-center mb-3">

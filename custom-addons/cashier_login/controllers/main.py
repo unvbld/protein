@@ -21,7 +21,7 @@ class CashierLoginController(BaseHome):
             'login': kw.get('login', ''),
         })
 
-    @http.route('/cashier/login/process', type='http', auth='public', methods=['POST'], csrf=False, website=True)
+    @http.route('/cashier/login/process', type='http', auth='public', methods=['POST'], website=True)
     def cashier_login_post(self, redirect=None, **post):
         """
         Process the login for cashiers
