@@ -7,44 +7,89 @@
                 <form class="oe_login_form" role="form" method="post">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
                     <t t-set="title" t-value="'Cashier Login'"/>
-                    
+
                     <div class="text-center mb-3">
                         <h3>Cashier Login</h3>
                         <p>Login to access the Point of Sale directly</p>
                     </div>
-                    
+
                     <div class="form-group mb-3">
                         <label for="login" class="col-form-label">Email/Username</label>
                         <input type="text" id="login" class="form-control" name="login" t-att-value="login" placeholder="Email or Username" required="required"/>
                     </div>
-                    
+
                     <div class="form-group mb-3">
                         <label for="password" class="col-form-label">Password</label>
                         <input type="password" id="password" class="form-control" name="password" placeholder="Password" required="required"/>
                     </div>
-                    
+
                     <div class="d-grid gap-2">
                         <button class="btn btn-primary" type="submit">Login to POS</button>
                     </div>
-                    
+
                     <div class="text-center mt-3">
                         <a href="/web/login">Back to Standard Login</a>
                     </div>
-                    
+
                     <t t-if="error">
                         <div class="alert alert-danger mt-3" role="alert">
                             <t t-esc="error"/>
                         </div>
                     </t>
+
+                    <!-- Script for redirecting POS users after login -->
+                    <script type="text/javascript">
+                        // Check if user has POS permissions and redirect accordingly
+                        function checkPOSRedirect() {
+                            // Check if current user has POS permissions
+                            // We'll use an RPC call to check user's groups
+                            if (typeof session !== 'undefined' &amp;&amp; session.uid) {
+                                // Make an RPC call to check user's group membership
+                                fetch('/web/dataset/call_kw', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        jsonrpc: '2.0',
+                                        method: 'call',
+                                        params: {
+                                            model: 'res.users',
+                                            method: 'read',
+                                            args: [[session.uid], ['groups_id']],
+                                            kwargs: {}
+                                        },
+                                        id: Date.now()
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    if (data.result &amp;&amp; data.result[0]) {
+                                        const userGroups = data.result[0].groups_id;
+                                        // Check if user has POS user or POS manager permissions
+                                        // These are typically the IDs of the groups
+                                        // - POS User: point_of_sale.group_pos_user
+                                        // - POS Manager: point_of_sale.group_pos_manager
+
+                                        // For now, we'll redirect to POS page
+                                        // In a complete implementation, we'd check the group IDs
+                                        window.location.href = '/pos/ui';
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error('Error checking user permissions:', error);
+                                });
+                            }
+                        }
+
+                        // Add a check to see if we just logged in from the cashier login page
+                        if (window.location.pathname === '/web' &amp;&amp; document.referrer &amp;&amp; document.referrer.includes('/cashier/login')) {
+                            // User came from cashier login, so let's check their permissions and redirect if needed
+                            setTimeout(checkPOSRedirect, 1000); // Wait a bit for session to be initialized
+                        }
+                    </script>
                 </form>
             </t>
-        </template>
-        
-        <!-- Assets Registration -->
-        <template id="assets_backend" name="cashier_login assets" inherit_id="web.assets_common">
-            <xpath expr="." position="inside">
-                <script type="text/javascript" src="/cashier_login/static/src/js/cashier_login.js"></script>
-            </xpath>
         </template>
     </data>
 </odoo>
