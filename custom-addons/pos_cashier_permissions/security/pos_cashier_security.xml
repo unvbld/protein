@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+        <!-- Adding permissions to POS User group -->
+        <record id="point_of_sale.group_pos_user" model="res.groups">
+            <field name="name">Point of Sale / User</field>
+            <field name="implied_ids" eval="[(4, ref('base.group_user'))]"/>
+            <!-- Add permissions for POS session operations -->
+        </record>
+
+        <!-- Rules for POS session -->
+        <record id="pos_session_user_rule" model="ir.rule">
+            <field name="name">POS Session: User</field>
+            <field name="model_id" ref="point_of_sale.model_pos_session"/>
+            <field name="domain_force">[('user_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('point_of_sale.group_pos_user'))]"/>
+        </record>
+
+        <!-- Rules for POS order -->
+        <record id="pos_order_user_rule" model="ir.rule">
+            <field name="name">POS Order: User</field>
+            <field name="model_id" ref="point_of_sale.model_pos_order"/>
+            <field name="domain_force">[('user_id', '=', user.id)]</field>
+            <field name="groups" eval="[(4, ref('point_of_sale.group_pos_user'))]"/>
+        </record>
+
+        <!-- Rules for POS config -->
+        <record id="pos_config_user_rule" model="ir.rule">
+            <field name="name">POS Config: User</field>
+            <field name="model_id" ref="point_of_sale.model_pos_config"/>
+            <field name="domain_force">[(1, '=', 1)]</field>
+            <field name="groups" eval="[(4, ref('point_of_sale.group_pos_user'))]"/>
+        </record>
+
+    </data>
+</odoo>
