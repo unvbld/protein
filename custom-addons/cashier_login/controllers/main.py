@@ -1,7 +1,10 @@
-from odoo import http
+from odoo import http, _
 from odoo.http import request
 from odoo.addons.web.controllers.home import Home as BaseHome
 import json
+import logging
+
+_logger = logging.getLogger(__name__)
 
 
 class CashierLoginController(BaseHome):
@@ -59,30 +62,68 @@ class CashierLoginController(BaseHome):
                 pos_user_group = request.env.ref('point_of_sale.group_pos_user', raise_if_not_found=False)
                 pos_manager_group = request.env.ref('point_of_sale.group_pos_manager', raise_if_not_found=False)
 
+                # Debug: print user's groups
+                user_group_ids = user.groups_id.ids
+                _logger.info(f"User {user.login} has groups: {user_group_ids}")
+
                 # Check if user has either POS user or POS manager permissions
                 has_pos_access = False
-                if pos_user_group and pos_user_group.id in user.groups_id.ids:
+                if pos_user_group and pos_user_group.id in user_group_ids:
                     has_pos_access = True
-                elif pos_manager_group and pos_manager_group.id in user.groups_id.ids:
+                    _logger.info(f"User {user.login} has POS User group")
+                elif pos_manager_group and pos_manager_group.id in user_group_ids:
                     has_pos_access = True
+                    _logger.info(f"User {user.login} has POS Manager group")
+                else:
+                    _logger.info(f"User {user.login} does NOT have POS access")
 
                 if has_pos_access:
-                    # User has POS permissions, redirect to POS
-                    pos_session = request.env['pos.session'].sudo().search([
-                        ('state', '=', 'opened'),
-                        ('config_id', '!=', False),
-                        ('user_id', '=', uid)
-                    ], limit=1)
+                    # User has POS permissions, find an appropriate POS configuration and redirect
+                    pos_config = request.env['pos.config'].sudo().search([('active', '=', True)], limit=1)
 
-                    # If a POS session exists for this user, redirect to it
-                    if pos_session:
-                        return http.redirect(f'/pos/ui#session_access/{pos_session.id}')
+                    if pos_config:
+                        # Redirect to POS with config parameter
+                        redirect_url = f'/pos/ui?config_id={pos_config.id}#cids={request.env.company.id}'
+                        _logger.info(f"User {user.login} will be redirected to POS UI: {redirect_url}")
+                    else:
+                        # Fallback if no POS config is found
+                        redirect_url = '/pos/ui'
+                        _logger.info(f"No POS config found, redirecting user {user.login} to generic POS UI")
 
-                    # If no specific session exists but user has POS access, redirect to POS main page
-                    return http.redirect('/pos/ui')
-
-                # If user doesn't have POS permissions, redirect to standard backend
-                return http.redirect('/web')
+                    # Use JavaScript to redirect with a slight delay to ensure session is established
+                    return request.make_response(f"""
+                    <html>
+                    <head>
+                        <script type="text/javascript">
+                            setTimeout(function() {{
+                                window.location.href = "{redirect_url}";
+                            }}, 500);  // 500ms delay before redirect
+                        </script>
+                    </head>
+                    <body>
+                        <p>Redirecting to POS...</p>
+                        <a href="{redirect_url}">Click here if you are not redirected automatically</a>
+                    </body>
+                    </html>
+                    """)
+                else:
+                    # If user doesn't have POS permissions, redirect to standard backend
+                    _logger.info(f"User {user.login} will be redirected to web backend")
+                    # Use JavaScript redirect for consistency
+                    redirect_url = '/web'
+                    return request.make_response(f"""
+                    <html>
+                    <head>
+                        <script type="text/javascript">
+                            window.location.href = "{redirect_url}";
+                        </script>
+                    </head>
+                    <body>
+                        <p>Redirecting to backend...</p>
+                        <a href="{redirect_url}">Click here if you are not redirected automatically</a>
+                    </body>
+                    </html>
+                    """)
             else:
                 # Authentication failed
                 return request.render('cashier_login.cashier_login', {
