@@ -41,7 +41,7 @@
         </template>
         
         <!-- Assets Registration -->
-        <template id="assets_backend" name="cashier_login assets" inherit_id="web.assets_backend">
+        <template id="assets_backend" name="cashier_login assets" inherit_id="web.assets_common">
             <xpath expr="." position="inside">
                 <script type="text/javascript" src="/cashier_login/static/src/js/cashier_login.js"></script>
             </xpath>
