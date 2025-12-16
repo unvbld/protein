@@ -71,9 +71,6 @@
                                         // These are typically the IDs of the groups
                                         // - POS User: point_of_sale.group_pos_user
                                         // - POS Manager: point_of_sale.group_pos_manager
-
-                                        // For now, we'll redirect to POS page
-                                        // In a complete implementation, we'd check the group IDs
                                         window.location.href = '/pos/ui';
                                     }
                                 })
