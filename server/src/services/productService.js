@@ -156,7 +156,7 @@ export async function createProduct(productData) {
             name: productData.name,
             default_code: productData.sku || false,
             barcode: productData.barcode || false,
-            categ_id: productData.category_id || 1,
+            categ_id: productData.category_id ? parseInt(productData.category_id) : 1,
             list_price: price,
             standard_price: isNaN(cost) ? 0 : cost,
             type: 'product', // Stockable product
@@ -228,7 +228,9 @@ export async function updateProduct(productId, productData) {
         if (productData.name !== undefined) values.name = productData.name;
         if (productData.sku !== undefined) values.default_code = productData.sku || false;
         if (productData.barcode !== undefined) values.barcode = productData.barcode || false;
-        if (productData.category_id !== undefined) values.categ_id = productData.category_id;
+        if (productData.category_id !== undefined) {
+            values.categ_id = productData.category_id ? parseInt(productData.category_id) : 1;
+        }
         if (productData.price !== undefined && productData.price !== '') {
             const p = parseFloat(productData.price);
             if (!isNaN(p)) values.list_price = p;

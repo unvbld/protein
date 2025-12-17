@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
 import { ConfirmModal, AlertModal } from '../components/common/Modal';
-import { products } from '../services/api';
+import { products, categories } from '../services/api';
 
 const Inventory = () => {
     const [productList, setProductList] = useState([]);
@@ -11,6 +11,12 @@ const Inventory = () => {
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [uploading, setUploading] = useState(false);
+
+    // Category states
+    const [categoryList, setCategoryList] = useState([]);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
+    const [categoryFormData, setCategoryFormData] = useState({ name: '' });
 
     // Modal states
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, product: null });
@@ -23,11 +29,13 @@ const Inventory = () => {
         stock: '',
         unit: 'pcs',
         description: '',
+        category_id: '',
         image: null
     });
 
     useEffect(() => {
         loadProducts();
+        loadCategories();
     }, []);
 
     const loadProducts = async () => {
@@ -153,22 +161,38 @@ const Inventory = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        console.log('📤 Submitting product:', {
-            ...formData,
-            image: formData.image ? `IMAGE_${formData.image.length}_chars` : 'NO_IMAGE'
-        });
-
         try {
             setLoading(true);
 
-            const response = editingProduct
-                ? await products.update(editingProduct.id, formData)
-                : await products.create(formData);
+            // Prepare data - only include image if it was changed
+            const dataToSend = {
+                name: formData.name,
+                price: formData.price,
+                cost: formData.cost,
+                stock: formData.stock,
+                unit: formData.unit,
+                description: formData.description,
+                category_id: formData.category_id
+            };
 
-            if (response.status === 200 || response.status === 201) {
+            // Only include image if user uploaded a new one
+            if (formData.image) {
+                dataToSend.image = formData.image;
+            }
+
+            if (editingProduct) {
+                await products.update(editingProduct.id, dataToSend);
                 setAlertModal({
                     isOpen: true,
-                    message: `Produk berhasil ${editingProduct ? 'diperbarui' : 'ditambahkan'}`,
+                    message: 'Produk berhasil diperbarui',
+                    type: 'success',
+                    title: 'Berhasil'
+                });
+            } else {
+                await products.create(dataToSend);
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Produk berhasil ditambahkan',
                     type: 'success',
                     title: 'Berhasil'
                 });
@@ -185,6 +209,7 @@ const Inventory = () => {
                 stock: '',
                 unit: 'pcs',
                 description: '',
+                category_id: '',
                 image: null
             });
             loadProducts();
@@ -253,6 +278,80 @@ const Inventory = () => {
         }
     };
 
+    const loadCategories = async () => {
+        try {
+            const response = await categories.getAll();
+            setCategoryList(response.data || []);
+        } catch (error) {
+            console.error('Load categories error:', error);
+        }
+    };
+
+    const handleSaveCategory = async () => {
+        try {
+            if (!categoryFormData.name.trim()) {
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Nama kategori harus diisi',
+                    type: 'warning',
+                    title: 'Peringatan'
+                });
+                return;
+            }
+
+            if (editingCategory) {
+                await categories.update(editingCategory.id, categoryFormData);
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Kategori berhasil diperbarui',
+                    type: 'success',
+                    title: 'Berhasil'
+                });
+            } else {
+                await categories.create(categoryFormData);
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Kategori berhasil ditambahkan',
+                    type: 'success',
+                    title: 'Berhasil'
+                });
+            }
+
+            loadCategories();
+            setShowCategoryModal(false);
+            setEditingCategory(null);
+            setCategoryFormData({ name: '' });
+        } catch (error) {
+            console.error('Save category error:', error);
+            setAlertModal({
+                isOpen: true,
+                message: error.response?.data?.error || 'Gagal menyimpan kategori',
+                type: 'error',
+                title: 'Error'
+            });
+        }
+    };
+
+    const handleDeleteCategory = async (category) => {
+        try {
+            await categories.delete(category.id);
+            setAlertModal({
+                isOpen: true,
+                message: 'Kategori berhasil dihapus',
+                type: 'success',
+                title: 'Berhasil'
+            });
+            loadCategories();
+        } catch (error) {
+            console.error('Delete category error:', error);
+            setAlertModal({
+                isOpen: true,
+                message: error.response?.data?.error || 'Gagal menghapus kategori',
+                type: 'error',
+                title: 'Error'
+            });
+        }
+    };
     const handleAddNew = () => {
         setEditingProduct(null);
         setImageFile(null);
@@ -277,9 +376,14 @@ const Inventory = () => {
             <div className="content-container">
                 <div className="page-header">
                     <h1>📦 Manajemen Inventory</h1>
-                    <button className="btn btn-primary" onClick={handleAddNew}>
-                        + Tambah Produk
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-outline" onClick={() => setShowCategoryModal(true)}>
+                            🏷️ Kelola Kategori
+                        </button>
+                        <button className="btn btn-primary" onClick={handleAddNew}>
+                            + Tambah Produk
+                        </button>
+                    </div>
                 </div>
 
                 {loading && !showForm ? (
@@ -359,6 +463,23 @@ const Inventory = () => {
                                             required
                                             disabled={loading}
                                         />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Kategori</label>
+                                        <select
+                                            name="category_id"
+                                            value={formData.category_id}
+                                            onChange={handleInputChange}
+                                            disabled={loading}
+                                        >
+                                            <option value="">Pilih Kategori</option>
+                                            {categoryList.map(cat => (
+                                                <option key={cat.id} value={cat.id}>
+                                                    {cat.name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
 
                                     <div className="form-group">
@@ -482,6 +603,83 @@ const Inventory = () => {
                     </div>
                 )}
             </div>
+
+            {/* Category Management Modal */}
+            {showCategoryModal && (
+                <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
+                    <div className="modal-container modal-medium" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">Kelola Kategori</h3>
+                            <button className="modal-close" onClick={() => setShowCategoryModal(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Nama kategori baru"
+                                        value={categoryFormData.name}
+                                        onChange={(e) => setCategoryFormData({ name: e.target.value })}
+                                        style={{ flex: 1 }}
+                                    />
+                                    <button className="btn btn-primary" onClick={handleSaveCategory}>
+                                        {editingCategory ? 'Update' : 'Tambah'}
+                                    </button>
+                                    {editingCategory && (
+                                        <button
+                                            className="btn btn-outline"
+                                            onClick={() => {
+                                                setEditingCategory(null);
+                                                setCategoryFormData({ name: '' });
+                                            }}
+                                        >
+                                            Batal
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                {categoryList.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: '#64748b' }}>Belum ada kategori</p>
+                                ) : (
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Nama Kategori</th>
+                                                <th style={{ width: '150px' }}>Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {categoryList.map(cat => (
+                                                <tr key={cat.id}>
+                                                    <td>{cat.name}</td>
+                                                    <td>
+                                                        <button
+                                                            className="btn btn-sm btn-secondary"
+                                                            onClick={() => {
+                                                                setEditingCategory(cat);
+                                                                setCategoryFormData({ name: cat.name });
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-sm btn-danger"
+                                                            onClick={() => handleDeleteCategory(cat)}
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Confirm Delete Modal */}
             <ConfirmModal
