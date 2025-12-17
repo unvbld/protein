@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
+import { AlertModal } from '../components/common/Modal';
 import { pos, products as productsAPI } from '../services/api';
 
 const POS = () => {
@@ -12,6 +13,9 @@ const POS = () => {
     const [showPayment, setShowPayment] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [amountPaid, setAmountPaid] = useState('');
+
+    // Alert modal state
+    const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', type: 'warning', title: 'Peringatan' });
 
     useEffect(() => {
         loadProducts();
@@ -58,7 +62,12 @@ const POS = () => {
 
     const addToCart = (product) => {
         if (product.stock <= 0) {
-            alert('Stok tidak tersedia');
+            setAlertModal({
+                isOpen: true,
+                message: `Stok produk "${product.name}" tidak tersedia`,
+                type: 'warning',
+                title: 'Stok Habis'
+            });
             return;
         }
 
@@ -66,7 +75,12 @@ const POS = () => {
 
         if (existingItem) {
             if (existingItem.quantity >= product.stock) {
-                alert('Stok tidak cukup');
+                setAlertModal({
+                    isOpen: true,
+                    message: `Stok produk "${product.name}" tidak cukup. Tersedia: ${product.stock}`,
+                    type: 'warning',
+                    title: 'Stok Tidak Cukup'
+                });
                 return;
             }
             setCart(cart.map(item =>
@@ -87,6 +101,7 @@ const POS = () => {
 
     const updateQuantity = (productId, newQty) => {
         const product = products.find(p => p.id === productId);
+        const cartItem = cart.find(item => item.product_id === productId);
 
         if (newQty <= 0) {
             removeFromCart(productId);
@@ -94,7 +109,12 @@ const POS = () => {
         }
 
         if (product && newQty > product.stock) {
-            alert('Stok tidak cukup');
+            setAlertModal({
+                isOpen: true,
+                message: `Stok produk "${cartItem?.product_name}" tidak cukup. Tersedia: ${product.stock}`,
+                type: 'warning',
+                title: 'Stok Tidak Cukup'
+            });
             return;
         }
 
@@ -374,6 +394,15 @@ const POS = () => {
                     </div>
                 </div>
             )}
+
+            {/* Alert Modal */}
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                onClose={() => setAlertModal({ isOpen: false, message: '', type: 'warning', title: 'Peringatan' })}
+                title={alertModal.title}
+                message={alertModal.message}
+                type={alertModal.type}
+            />
         </div>
     );
 };
