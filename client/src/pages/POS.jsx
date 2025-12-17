@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
-import { AlertModal } from '../components/common/Modal';
+import { AlertModal, ConfirmModal } from '../components/common/Modal';
 import { pos, products as productsAPI } from '../services/api';
 
 const POS = () => {
@@ -14,8 +14,9 @@ const POS = () => {
     const [processing, setProcessing] = useState(false);
     const [amountPaid, setAmountPaid] = useState('');
 
-    // Alert modal state
+    // Modal states
     const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', type: 'warning', title: 'Peringatan' });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, paymentData: null });
 
     useEffect(() => {
         loadProducts();
@@ -141,21 +142,47 @@ const POS = () => {
 
     const handleCheckout = () => {
         if (cart.length === 0) {
-            alert('Keranjang masih kosong');
+            setAlertModal({
+                isOpen: true,
+                message: 'Keranjang masih kosong',
+                type: 'warning',
+                title: 'Peringatan'
+            });
             return;
         }
         setShowPayment(true);
         setAmountPaid(getTotalAmount().toString());
     };
 
-    const processPayment = async (paymentMethod = 'cash') => {
+    const processPayment = (paymentMethod = 'cash') => {
         const total = getTotalAmount();
         const paid = parseFloat(amountPaid) || 0;
 
         if (paid < total) {
-            alert('Jumlah pembayaran kurang');
+            setAlertModal({
+                isOpen: true,
+                message: 'Jumlah pembayaran kurang dari total belanja',
+                type: 'warning',
+                title: 'Pembayaran Kurang'
+            });
             return;
         }
+
+        // Show confirmation modal
+        const change = paid - total;
+        setConfirmModal({
+            isOpen: true,
+            paymentData: {
+                total,
+                paid,
+                change,
+                paymentMethod
+            }
+        });
+    };
+
+    const confirmPayment = async () => {
+        const { total, paid, change, paymentMethod } = confirmModal.paymentData;
 
         try {
             setProcessing(true);
@@ -170,8 +197,13 @@ const POS = () => {
 
             const response = await pos.createOrder(orderData);
 
-            const change = getChange();
-            alert(`✅ Transaksi berhasil!\n\nNo. Order: ${response.data.order_number}\nTotal: Rp ${total.toLocaleString('id-ID')}\nBayar: Rp ${paid.toLocaleString('id-ID')}\nKembali: Rp ${change.toLocaleString('id-ID')}`);
+            // Show success modal
+            setAlertModal({
+                isOpen: true,
+                message: `Transaksi berhasil!\n\nNo. Order: ${response.data.order_number}\nTotal: Rp ${total.toLocaleString('id-ID')}\nBayar: Rp ${paid.toLocaleString('id-ID')}\nKembali: Rp ${change.toLocaleString('id-ID')}`,
+                type: 'success',
+                title: 'Pembayaran Berhasil'
+            });
 
             // Reset
             setCart([]);
@@ -180,7 +212,12 @@ const POS = () => {
             loadProducts(search, selectedCategory); // Refresh to update stock
         } catch (error) {
             console.error('Payment error:', error);
-            alert(error.response?.data?.error || 'Gagal memproses pembayaran');
+            setAlertModal({
+                isOpen: true,
+                message: error.response?.data?.error || 'Gagal memproses pembayaran',
+                type: 'error',
+                title: 'Error'
+            });
         } finally {
             setProcessing(false);
         }
@@ -380,6 +417,21 @@ const POS = () => {
                     </div>
                 </div>
             )}
+
+            {/* Confirm Payment Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ isOpen: false, paymentData: null })}
+                onConfirm={confirmPayment}
+                title="Konfirmasi Pembayaran"
+                message={confirmModal.paymentData ?
+                    `Total Belanja: Rp ${confirmModal.paymentData.total.toLocaleString('id-ID')}\nJumlah Bayar: Rp ${confirmModal.paymentData.paid.toLocaleString('id-ID')}\nKembalian: Rp ${confirmModal.paymentData.change.toLocaleString('id-ID')}\n\nProses pembayaran?`
+                    : ''
+                }
+                confirmText="Proses"
+                cancelText="Batal"
+                confirmStyle="primary"
+            />
 
             {/* Alert Modal */}
             <AlertModal
