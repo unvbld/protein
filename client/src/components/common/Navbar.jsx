@@ -22,23 +22,23 @@ const Navbar = () => {
         <nav className="navbar">
             <div className="navbar-container">
                 <div className="navbar-brand">
-                    <h1>📦 Inventory & POS</h1>
+                    <h1>Inventory & POS</h1>
                 </div>
 
                 <div className="navbar-menu">
                     {canViewDashboard && (
                         <Link to="/dashboard" className="nav-link">
-                            📊 Dashboard
+                            Dashboard
                         </Link>
                     )}
                     {canViewInventory && (
                         <Link to="/inventory" className="nav-link">
-                            📦 Inventory
+                            Inventory
                         </Link>
                     )}
                     {canViewPOS && (
                         <Link to="/pos" className="nav-link">
-                            💰 POS
+                            POS
                         </Link>
                     )}
                 </div>

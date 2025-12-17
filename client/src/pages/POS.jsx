@@ -235,7 +235,7 @@ const POS = () => {
                         className={`category-item ${!selectedCategory ? 'active' : ''}`}
                         onClick={() => setSelectedCategory(null)}
                     >
-                        📦 Semua Produk
+                        Semua Produk
                     </div>
                     {categories.map(cat => (
                         <div
@@ -254,7 +254,7 @@ const POS = () => {
                         <input
                             type="text"
                             className="pos-search-input"
-                            placeholder="🔍 Cari produk..."
+                            placeholder="Cari produk..."
                             value={search}
                             onChange={handleSearch}
                         />
@@ -284,7 +284,7 @@ const POS = () => {
                                             />
                                         ) : null}
                                         <div className="pos-image-placeholder" style={{ display: product.image_large || product.image ? 'none' : 'flex' }}>
-                                            📦
+
                                         </div>
                                     </div>
                                     <div className="pos-product-info">
@@ -321,7 +321,7 @@ const POS = () => {
                                             {item.image ? (
                                                 <img src={`data:image/png;base64,${item.image}`} alt={item.product_name} />
                                             ) : (
-                                                <div className="cart-image-placeholder">📦</div>
+                                                <div className="cart-image-placeholder"></div>
                                             )}
                                         </div>
                                         <div className="cart-item-details">
@@ -354,7 +354,7 @@ const POS = () => {
                                     </span>
                                 </div>
                                 <button className="pos-pay-button" onClick={handleCheckout}>
-                                    💳 Bayar
+                                    Bayar
                                 </button>
                             </div>
                         </>
@@ -402,7 +402,7 @@ const POS = () => {
                                     onClick={() => processPayment('cash')}
                                     disabled={processing || getChange() < 0}
                                 >
-                                    💵 Cash
+                                    Cash
                                 </button>
                             </div>
                         </div>
