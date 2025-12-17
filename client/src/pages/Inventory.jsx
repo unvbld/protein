@@ -109,12 +109,23 @@ const Inventory = () => {
         try {
             setUploading(true);
 
-            // Compress image
-            const compressedDataUrl = await compressImage(file);
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            console.log(`📁 Original file: ${fileSizeMB} MB`);
+
+            // Compress image with smaller dimensions for Odoo
+            const compressedDataUrl = await compressImage(file, 600, 600, 0.85);
             const base64 = compressedDataUrl.split(',')[1];
 
-            const compressedSizeMB = (base64.length * 0.75 / (1024 * 1024)).toFixed(2);
-            console.log(`✅ Image compressed to: ${compressedSizeMB} MB`);
+            const compressedSizeKB = (base64.length * 0.75 / 1024).toFixed(2);
+            console.log(`✅ Compressed to: ${compressedSizeKB} KB (base64 length: ${base64.length})`);
+
+            // Validation - Odoo image field usually accepts up to ~3MB base64
+            if (base64.length > 3 * 1024 * 1024) {
+                alert('Gambar masih terlalu besar setelah kompresi. Silakan pilih gambar yang lebih kecil.');
+                e.target.value = '';
+                setUploading(false);
+                return;
+            }
 
             setImageFile(file);
             setImagePreview(compressedDataUrl);
@@ -123,9 +134,11 @@ const Inventory = () => {
                 image: base64
             }));
 
+            console.log('✅ Image ready to upload, size:', compressedSizeKB, 'KB');
+
         } catch (error) {
             console.error('Image processing error:', error);
-            alert('Gagal memproses gambar');
+            alert('Gagal memproses gambar: ' + error.message);
             e.target.value = '';
         } finally {
             setUploading(false);
