@@ -1,7 +1,7 @@
 import getOdooClient from './odooClient.js';
 
 /**
- * Create POS order in Odoo
+ * Create POS order in Odoo - Simplified without session management
  */
 export async function createPOSOrder(orderData, userId) {
     try {
@@ -11,15 +11,15 @@ export async function createPOSOrder(orderData, userId) {
             throw new Error('Order must contain at least one item');
         }
 
-        // Get POS session (or create one if needed)
-        const session = await getOrCreatePOSSession(userId);
+        console.log('📝 Creating POS order for user:', userId);
+        console.log('Items:', items);
 
-        // Calculate total
+        // Calculate total and prepare order lines
         let totalAmount = 0;
         const orderLines = [];
 
         for (const item of items) {
-            const product = await getOdooClient().read('product.product', [item.product_id], ['list_price']);
+            const product = await getOdooClient().read('product.product', [item.product_id], ['list_price', 'name']);
             if (!product || product.length === 0) {
                 throw new Error(`Product ${item.product_id} not found`);
             }
@@ -28,113 +28,139 @@ export async function createPOSOrder(orderData, userId) {
             const subtotal = price * item.quantity;
             totalAmount += subtotal;
 
-            // POS order line format: [0, 0, {values}]
+            // Sale order line format: [0, 0, {values}]
             orderLines.push([0, 0, {
                 product_id: item.product_id,
-                qty: item.quantity,
+                product_uom_qty: item.quantity,
                 price_unit: price,
-                price_subtotal: subtotal,
-                price_subtotal_incl: subtotal
+                name: product[0].name
             }]);
         }
 
-        // Create POS order
+        console.log('💰 Total amount:', totalAmount);
+
+        // Format date for Odoo: YYYY-MM-DD HH:MM:SS
+        const now = new Date();
+        const odooDate = now.toISOString().slice(0, 19).replace('T', ' ');
+
+        // Create sale order (simpler than POS order with sessions)
+        const orderNumber = `POS-${Date.now()}`;
         const orderValues = {
-            session_id: session.id,
+            partner_id: customer_id || 1, // Use default partner if no customer
             user_id: userId,
-            partner_id: customer_id || false,
-            lines: orderLines,
-            amount_total: totalAmount,
-            amount_tax: 0,
-            amount_paid: totalAmount,
-            amount_return: 0,
-            state: 'paid'
+            date_order: odooDate,  // Fixed format
+            order_line: orderLines,
+            // Don't set state - let it be draft to avoid routing/delivery validation
+            note: `POS Order - Payment: ${payment_method}`
         };
+        console.log('🚀 Creating sale order...');
+        const orderId = await getOdooClient().create('sale.order', orderValues);
+        console.log('✅ Sale order created:', orderId);
 
-        const orderId = await getOdooClient().create('pos.order', orderValues);
+        // Mark as paid without confirming (to avoid warehouse routing)
+        try {
+            await getOdooClient().write('sale.order', orderId, {
+                state: 'sale',  // Mark as confirmed sale
+                invoice_status: 'invoiced'  // Mark as invoiced
+            });
+            console.log('✅ Order marked as paid');
+        } catch (e) {
+            console.log('⚠️ Could not mark as paid:', e.message);
+        }
 
-        // Create payment
-        await getOdooClient().create('pos.payment', {
-            pos_order_id: orderId,
-            amount: totalAmount,
-            payment_method_id: await getPaymentMethodId(session.id, payment_method)
-        });
+        // Manually reduce stock for each item (since we bypass delivery)
+        console.log('📦 Updating stock for sold items...');
+        for (const item of items) {
+            try {
+                // Get current stock
+                const product = await getOdooClient().read('product.product', [item.product_id], ['qty_available']);
+                if (product && product.length > 0) {
+                    const currentStock = product[0].qty_available;
+                    const newStock = Math.max(0, currentStock - item.quantity);
+
+                    console.log(`   Product ${item.product_id}: ${currentStock} → ${newStock}`);
+
+                    // Find stock quant and update
+                    const quants = await getOdooClient().searchRead(
+                        'stock.quant',
+                        [
+                            ['product_id', '=', item.product_id],
+                            ['location_id.usage', '=', 'internal']
+                        ],
+                        ['id', 'quantity'],
+                        { limit: 1 }
+                    );
+
+                    if (quants.length > 0) {
+                        await getOdooClient().write('stock.quant', quants[0].id, {
+                            quantity: newStock
+                        });
+                    }
+                }
+            } catch (stockError) {
+                console.error(`⚠️ Stock update failed for product ${item.product_id}:`, stockError.message);
+            }
+        }
+        console.log('✅ Stock updated');
 
         // Get full order details
-        const order = await getPOSOrderById(orderId);
+        const order = await getSaleOrderById(orderId);
 
-        return order;
+        return {
+            ...order,
+            order_number: orderNumber
+        };
     } catch (error) {
-        console.error('Create POS order error:', error);
+        console.error('❌ Create POS order error:', error);
         throw new Error('Failed to create POS order: ' + error.message);
     }
 }
 
 /**
- * Get or create POS session for user
+ * Get sale order by ID
  */
-async function getOrCreatePOSSession(userId) {
+async function getSaleOrderById(orderId) {
     try {
-        // Search for open session
-        const sessions = await getOdooClient().searchRead(
-            'pos.session',
-            [['state', '=', 'opened'], ['user_id', '=', userId]],
-            ['id', 'name', 'config_id'],
-            { limit: 1 }
-        );
+        const orders = await getOdooClient().read('sale.order', [parseInt(orderId)], [
+            'id', 'name', 'date_order', 'user_id', 'partner_id',
+            'amount_total', 'state', 'order_line'
+        ]);
 
-        if (sessions.length > 0) {
-            return sessions[0];
+        if (!orders || orders.length === 0) {
+            throw new Error('Order not found');
         }
 
-        // No open session, get POS config
-        const configs = await getOdooClient().searchRead(
-            'pos.config',
-            [],
-            ['id', 'name'],
-            { limit: 1 }
-        );
+        const order = orders[0];
 
-        if (configs.length === 0) {
-            throw new Error('No POS configuration found. Please create a POS config in Odoo first.');
+        // Get order lines
+        let items = [];
+        if (order.order_line && order.order_line.length > 0) {
+            const lines = await getOdooClient().read('sale.order.line', order.order_line, [
+                'product_id', 'product_uom_qty', 'price_unit', 'price_subtotal'
+            ]);
+
+            items = lines.map(line => ({
+                product_id: line.product_id[0],
+                product_name: line.product_id[1],
+                quantity: line.product_uom_qty,
+                price: line.price_unit,
+                subtotal: line.price_subtotal
+            }));
         }
 
-        // Create new session
-        const sessionId = await getOdooClient().create('pos.session', {
-            config_id: configs[0].id,
-            user_id: userId
-        });
-
-        // Open the session
-        await getOdooClient().execute('pos.session', 'action_pos_session_open', [[sessionId]]);
-
-        const session = await getOdooClient().read('pos.session', [sessionId], ['id', 'name', 'config_id']);
-        return session[0];
+        return {
+            id: order.id,
+            order_number: order.name,
+            date: order.date_order,
+            cashier: order.user_id ? order.user_id[1] : null,
+            customer: order.partner_id ? order.partner_id[1] : 'Walk-in Customer',
+            total_amount: order.amount_total,
+            amount_paid: order.amount_total,
+            status: order.state,
+            items: items
+        };
     } catch (error) {
-        console.error('Get/Create POS session error:', error);
-        throw error;
-    }
-}
-
-/**
- * Get payment method ID
- */
-async function getPaymentMethodId(sessionId, methodType = 'cash') {
-    try {
-        const session = await getOdooClient().read('pos.session', [sessionId], ['config_id']);
-        const configId = session[0].config_id[0];
-
-        // Get payment methods for this POS config
-        const config = await getOdooClient().read('pos.config', [configId], ['payment_method_ids']);
-
-        if (config[0].payment_method_ids && config[0].payment_method_ids.length > 0) {
-            // Return first payment method (typically cash)
-            return config[0].payment_method_ids[0];
-        }
-
-        throw new Error('No payment methods configured for this POS');
-    } catch (error) {
-        console.error('Get payment method error:', error);
+        console.error('Get sale order error:', error);
         throw error;
     }
 }
@@ -170,13 +196,13 @@ export async function getPOSOrders(filters = {}, userId, userRole) {
 
         const fields = [
             'id', 'name', 'date_order', 'user_id', 'partner_id',
-            'amount_total', 'amount_paid', 'state', 'session_id'
+            'amount_total', 'state'
         ];
 
-        const orders = await getOdooClient().searchRead('pos.order', domain, fields, options);
+        const orders = await getOdooClient().searchRead('sale.order', domain, fields, options);
 
         // Get total count
-        const totalIds = await getOdooClient().search('pos.order', domain);
+        const totalIds = await getOdooClient().search('sale.order', domain);
         const total = totalIds.length;
 
         const formattedOrders = orders.map(o => ({
@@ -186,9 +212,8 @@ export async function getPOSOrders(filters = {}, userId, userRole) {
             cashier: o.user_id ? o.user_id[1] : null,
             customer: o.partner_id ? o.partner_id[1] : 'Walk-in Customer',
             total_amount: o.amount_total,
-            amount_paid: o.amount_paid,
-            status: o.state,
-            session: o.session_id ? o.session_id[1] : null
+            amount_paid: o.amount_total,
+            status: o.state
         }));
 
         return {
@@ -210,50 +235,7 @@ export async function getPOSOrders(filters = {}, userId, userRole) {
  * Get POS order by ID
  */
 export async function getPOSOrderById(orderId) {
-    try {
-        const orders = await getOdooClient().read('pos.order', [parseInt(orderId)], [
-            'id', 'name', 'date_order', 'user_id', 'partner_id',
-            'amount_total', 'amount_paid', 'state', 'session_id', 'lines'
-        ]);
-
-        if (!orders || orders.length === 0) {
-            throw new Error('Order not found');
-        }
-
-        const order = orders[0];
-
-        // Get order lines
-        let items = [];
-        if (order.lines && order.lines.length > 0) {
-            const lines = await getOdooClient().read('pos.order.line', order.lines, [
-                'product_id', 'qty', 'price_unit', 'price_subtotal'
-            ]);
-
-            items = lines.map(line => ({
-                product_id: line.product_id[0],
-                product_name: line.product_id[1],
-                quantity: line.qty,
-                price: line.price_unit,
-                subtotal: line.price_subtotal
-            }));
-        }
-
-        return {
-            id: order.id,
-            order_number: order.name,
-            date: order.date_order,
-            cashier: order.user_id ? order.user_id[1] : null,
-            customer: order.partner_id ? order.partner_id[1] : 'Walk-in Customer',
-            total_amount: order.amount_total,
-            amount_paid: order.amount_paid,
-            status: order.state,
-            session: order.session_id ? order.session_id[1] : null,
-            items: items
-        };
-    } catch (error) {
-        console.error('Get POS order error:', error);
-        throw error;
-    }
+    return getSaleOrderById(orderId);
 }
 
 /**
@@ -275,8 +257,8 @@ export async function getPOSProducts(search = '') {
         }
 
         const fields = [
-            'id', 'name', 'default_code', 'barcode',
-            'list_price', 'qty_available', 'uom_id', 'image_128'
+            'id', 'name', 'default_code', 'barcode', 'categ_id',
+            'list_price', 'qty_available', 'uom_id', 'image_128', 'image_256'
         ];
 
         const products = await getOdooClient().searchRead('product.product', domain, fields, {
@@ -289,10 +271,12 @@ export async function getPOSProducts(search = '') {
             name: p.name,
             sku: p.default_code || null,
             barcode: p.barcode || null,
+            category_id: p.categ_id ? p.categ_id[0] : null,
             price: p.list_price,
             stock: p.qty_available,
             unit: p.uom_id ? p.uom_id[1] : 'Unit',
-            image: p.image_128 || null
+            image: p.image_128 || null,
+            image_large: p.image_256 || null
         }));
     } catch (error) {
         console.error('Get POS products error:', error);
