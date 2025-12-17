@@ -367,20 +367,6 @@ const POS = () => {
                                 >
                                     💵 Cash
                                 </button>
-                                <button
-                                    className="payment-method-btn card"
-                                    onClick={() => processPayment('card')}
-                                    disabled={processing || getChange() < 0}
-                                >
-                                    💳 Kartu
-                                </button>
-                                <button
-                                    className="payment-method-btn ewallet"
-                                    onClick={() => processPayment('ewallet')}
-                                    disabled={processing || getChange() < 0}
-                                >
-                                    📱 E-Wallet
-                                </button>
                             </div>
                         </div>
 
