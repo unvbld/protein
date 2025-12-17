@@ -187,7 +187,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2563eb;
   padding: 1rem;
 }
 
@@ -307,7 +307,7 @@ body {
 }
 
 .category-item.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2563eb;
   color: white;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
@@ -372,7 +372,7 @@ body {
 .pos-product-image {
   width: 100%;
   height: 180px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -467,7 +467,7 @@ body {
   align-items: center;
   padding: 1.25rem 1.5rem;
   border-bottom: 2px solid var(--border);
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #2563eb;
   color: white;
 }
 
@@ -657,7 +657,7 @@ body {
 .pos-pay-button {
   width: 100%;
   padding: 1rem;
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: #10b981;
   color: white;
   border: none;
   border-radius: 12px;
@@ -876,7 +876,7 @@ body {
 .product-image-placeholder {
   width: 50px;
   height: 50px;
-  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  background: #f8fafc;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -902,8 +902,66 @@ body {
   gap: 1rem;
 }
 
+/* Colorful stat cards - Google Ads style */
+.stat-card:nth-child(1) {
+  background: #2563eb;
+  color: white;
+}
+
+.stat-card:nth-child(1) .stat-label,
+.stat-card:nth-child(1) .stat-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-card:nth-child(1) .stat-value {
+  color: white;
+}
+
+.stat-card:nth-child(2) {
+  background: #10b981;
+  color: white;
+}
+
+.stat-card:nth-child(2) .stat-label,
+.stat-card:nth-child(2) .stat-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-card:nth-child(2) .stat-value {
+  color: white;
+}
+
+.stat-card:nth-child(3) {
+  background: #f59e0b;
+  color: white;
+}
+
+.stat-card:nth-child(3) .stat-label,
+.stat-card:nth-child(3) .stat-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-card:nth-child(3) .stat-value {
+  color: white;
+}
+
+.stat-card:nth-child(4) {
+  background: #8b5cf6;
+  color: white;
+}
+
+.stat-card:nth-child(4) .stat-label,
+.stat-card:nth-child(4) .stat-subtitle {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stat-card:nth-child(4) .stat-value {
+  color: white;
+}
+
 .stat-icon {
   font-size: 3rem;
+  opacity: 0.9;
 }
 
 .stat-content {
@@ -1104,8 +1162,13 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .modal-container {
@@ -1120,13 +1183,31 @@ body {
 }
 
 @keyframes slideUp {
-  from { transform: translateY(20px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
-.modal-small { width: 90%; max-width: 400px; }
-.modal-medium { width: 90%; max-width: 600px; }
-.modal-large { width: 90%; max-width: 900px; }
+.modal-small {
+  width: 90%;
+  max-width: 400px;
+}
+
+.modal-medium {
+  width: 90%;
+  max-width: 600px;
+}
+
+.modal-large {
+  width: 90%;
+  max-width: 900px;
+}
 
 .modal-header {
   padding: 1.5rem;
@@ -1191,11 +1272,26 @@ body {
   gap: 1rem;
 }
 
-.alert-icon { font-size: 2rem; flex-shrink: 0; }
-.alert-info .alert-icon { color: var(--primary); }
-.alert-success .alert-icon { color: var(--success); }
-.alert-error .alert-icon { color: var(--danger); }
-.alert-warning .alert-icon { color: var(--warning); }
+.alert-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+}
+
+.alert-info .alert-icon {
+  color: var(--primary);
+}
+
+.alert-success .alert-icon {
+  color: var(--success);
+}
+
+.alert-error .alert-icon {
+  color: var(--danger);
+}
+
+.alert-warning .alert-icon {
+  color: var(--warning);
+}
 
 .btn-danger {
   background: var(--danger);

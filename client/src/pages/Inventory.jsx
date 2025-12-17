@@ -375,10 +375,10 @@ const Inventory = () => {
 
             <div className="content-container">
                 <div className="page-header">
-                    <h1>📦 Manajemen Inventory</h1>
+                    <h1>Manajemen Inventory</h1>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                         <button className="btn btn-outline" onClick={() => setShowCategoryModal(true)}>
-                            🏷️ Kelola Kategori
+                            Kelola Kategori
                         </button>
                         <button className="btn btn-primary" onClick={handleAddNew}>
                             + Tambah Produk
@@ -415,7 +415,7 @@ const Inventory = () => {
                                                     />
                                                 ) : (
                                                     <div className="product-image-placeholder">
-                                                        📦
+
                                                     </div>
                                                 )}
                                             </td>

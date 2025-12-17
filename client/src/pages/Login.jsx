@@ -37,7 +37,7 @@ const Login = () => {
             <div className="login-container">
                 <div className="login-card">
                     <div className="login-header">
-                        <h1>📦 Inventory & POS</h1>
+                        <h1>Inventory & POS</h1>
                         <p>Sistem Manajemen Toko Alat Tulis</p>
                     </div>
 

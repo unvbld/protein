@@ -50,12 +50,12 @@ const Dashboard = () => {
 
             <div className="content-container">
                 <div className="page-header">
-                    <h1>📊 Dashboard</h1>
+                    <h1>Dashboard</h1>
                 </div>
 
                 <div className="stats-grid">
                     <div className="stat-card">
-                        <div className="stat-icon">📈</div>
+                        <div className="stat-icon"></div>
                         <div className="stat-content">
                             <div className="stat-label">Penjualan Hari Ini</div>
                             <div className="stat-value">{stats?.today?.sales_count || 0}</div>
@@ -66,7 +66,7 @@ const Dashboard = () => {
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon">💰</div>
+                        <div className="stat-icon"></div>
                         <div className="stat-content">
                             <div className="stat-label">Penjualan Bulan Ini</div>
                             <div className="stat-value">{stats?.this_month?.sales_count || 0}</div>
@@ -77,7 +77,7 @@ const Dashboard = () => {
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon">📦</div>
+                        <div className="stat-icon"></div>
                         <div className="stat-content">
                             <div className="stat-label">Total Produk</div>
                             <div className="stat-value">{stats?.inventory?.total_products || 0}</div>
@@ -88,7 +88,7 @@ const Dashboard = () => {
                     </div>
 
                     <div className="stat-card">
-                        <div className="stat-icon">💵</div>
+                        <div className="stat-icon"></div>
                         <div className="stat-content">
                             <div className="stat-label">Total Revenue</div>
                             <div className="stat-value">
@@ -131,7 +131,7 @@ const Dashboard = () => {
                     </div>
 
                     <div className="dashboard-card">
-                        <h3>⚠️ Stok Rendah</h3>
+                        <h3>Stok Rendah</h3>
                         <div className="table-container">
                             <table className="data-table compact">
                                 <thead>
