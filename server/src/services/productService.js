@@ -165,18 +165,27 @@ export async function createProduct(productData) {
             purchase_ok: true
         };
 
+
         // Add image if provided
         if (productData.image) {
-            console.log('📸 Adding product image, length:', productData.image.length);
+            const imageLength = productData.image.length;
+            console.log('📸 Adding product image:');
+            console.log('   - Base64 length:', imageLength, 'chars');
+            console.log('   - Estimated size:', (imageLength * 0.75 / 1024).toFixed(2), 'KB');
+            console.log('   - First 50 chars:', productData.image.substring(0, 50));
+
             values.image_128 = productData.image;
             values.image_256 = productData.image;
+            values.image_1920 = productData.image;  // Also set full size
+        } else {
+            console.log('⚠️ No image provided in productData');
         }
 
         if (productData.description) {
             values.description_sale = productData.description;
         }
 
-        console.log('🚀 Sending to Odoo...');
+        console.log('🚀 Sending to Odoo, fields:', Object.keys(values));
         const productId = await getOdooClient().create('product.product', values);
         console.log('✅ Product created with ID:', productId);
 
