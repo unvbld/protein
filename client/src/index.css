@@ -1398,6 +1398,176 @@ body {
   color: var(--danger);
 }
 
+/* ==================== RECEIPT MODAL STYLES ==================== */
+
+.receipt-modal {
+  max-width: 500px;
+}
+
+.receipt-content {
+  background: white;
+  padding: 2rem;
+  font-family: 'Courier New', monospace;
+}
+
+.receipt-header {
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.receipt-header h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.receipt-header p {
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.receipt-divider {
+  border-top: 1px dashed #333;
+  margin: 1rem 0;
+}
+
+.receipt-info,
+.receipt-total,
+.receipt-payment {
+  margin: 1rem 0;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.receipt-grand-total {
+  font-weight: 700;
+  font-size: 1.125rem;
+  margin-top: 0.5rem;
+}
+
+.receipt-items {
+  margin: 1rem 0;
+}
+
+.receipt-items-header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #333;
+  font-size: 0.875rem;
+}
+
+.receipt-item-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.item-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-qty,
+.item-price {
+  text-align: right;
+}
+
+.receipt-footer {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.875rem;
+}
+
+.receipt-footer p {
+  margin: 0.25rem 0;
+}
+
+.receipt-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.receipt-actions button {
+  flex: 1;
+}
+
+/* Print Styles */
+@media print {
+
+  /* Hide everything except receipt */
+  body * {
+    visibility: hidden;
+  }
+
+  .receipt-modal,
+  .receipt-modal * {
+    visibility: visible;
+  }
+
+  .receipt-modal {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    max-width: 80mm;
+  }
+
+  .modal-overlay {
+    background: none !important;
+  }
+
+  .modal-container {
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 80mm !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .receipt-content {
+    padding: 10mm;
+    font-size: 12px;
+  }
+
+  .receipt-header h2 {
+    font-size: 18px;
+  }
+
+  .receipt-header p {
+    font-size: 12px;
+  }
+
+  /* Hide buttons when printing */
+  .no-print,
+  .receipt-actions {
+    display: none !important;
+  }
+
+  /* Ensure black text for printing */
+  .receipt-content,
+  .receipt-content * {
+    color: #000 !important;
+  }
+
+  /* Page breaks */
+  .receipt-content {
+    page-break-inside: avoid;
+  }
+}
+
 .alert-warning .alert-icon {
   color: var(--warning);
 }

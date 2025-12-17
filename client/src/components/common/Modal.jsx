@@ -98,7 +98,10 @@ export const AlertModal = ({
     title = 'Notifikasi',
     message,
     type = 'info', // 'info' | 'success' | 'error' | 'warning'
-    buttonText = 'OK'
+    buttonText = 'OK',
+    actionButton = null, // Optional action button { text, onClick, className }
+    showPrintButton = false,
+    onPrint = null
 }) => {
     const icons = {
         info: 'ℹ️',
@@ -114,9 +117,30 @@ export const AlertModal = ({
             title={title}
             size="small"
             footer={
-                <button className="btn btn-primary" onClick={onClose}>
-                    {buttonText}
-                </button>
+                <>
+                    {(showPrintButton && onPrint) && (
+                        <button
+                            className="btn btn-success"
+                            onClick={onPrint}
+                        >
+                            🖨️ Cetak Struk
+                        </button>
+                    )}
+                    {actionButton && (
+                        <button
+                            className={actionButton.className || 'btn btn-primary'}
+                            onClick={() => {
+                                actionButton.onClick();
+                                onClose();
+                            }}
+                        >
+                            {actionButton.text}
+                        </button>
+                    )}
+                    <button className="btn btn-primary" onClick={onClose}>
+                        {buttonText}
+                    </button>
+                </>
             }
         >
             <div className={`alert-content alert-${type}`}>
