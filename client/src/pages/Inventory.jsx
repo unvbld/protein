@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
+import { ConfirmModal, AlertModal } from '../components/common/Modal';
 import { products } from '../services/api';
 
 const Inventory = () => {
@@ -10,6 +11,11 @@ const Inventory = () => {
     const [imageFile, setImageFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [uploading, setUploading] = useState(false);
+
+    // Modal states
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, product: null });
+    const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', type: 'info', title: 'Notifikasi' });
+
     const [formData, setFormData] = useState({
         name: '',
         sku: '',
@@ -156,12 +162,17 @@ const Inventory = () => {
         try {
             setLoading(true);
 
-            if (editingProduct) {
-                await products.update(editingProduct.id, formData);
-                alert('✅ Produk berhasil diupdate');
-            } else {
-                await products.create(formData);
-                alert('✅ Produk berhasil ditambahkan');
+            const response = editingProduct
+                ? await products.update(editingProduct.id, formData)
+                : await products.create(formData);
+
+            if (response.status === 200 || response.status === 201) {
+                setAlertModal({
+                    isOpen: true,
+                    message: `Produk berhasil ${editingProduct ? 'diperbarui' : 'ditambahkan'}`,
+                    type: 'success',
+                    title: 'Berhasil'
+                });
             }
 
             setShowForm(false);
@@ -182,7 +193,12 @@ const Inventory = () => {
         } catch (error) {
             console.error('Save product error:', error);
             const errorMsg = error.response?.data?.error || error.message || 'Gagal menyimpan produk';
-            alert(`❌ ${errorMsg}`);
+            setAlertModal({
+                isOpen: true,
+                message: errorMsg,
+                type: 'error',
+                title: 'Error'
+            });
         } finally {
             setLoading(false);
         }
@@ -212,16 +228,31 @@ const Inventory = () => {
         setShowForm(true);
     };
 
-    const handleDelete = async (product) => {
-        if (!confirm(`Hapus produk "${product.name}"?`)) return;
+    const handleDelete = (product) => {
+        setConfirmModal({
+            isOpen: true,
+            product: product
+        });
+    };
 
+    const confirmDelete = async () => {
         try {
-            await products.delete(product.id);
-            alert('✅ Produk berhasil dihapus');
+            await products.delete(confirmModal.product.id);
+            setAlertModal({
+                isOpen: true,
+                message: 'Produk berhasil dihapus',
+                type: 'success',
+                title: 'Berhasil'
+            });
             loadProducts();
         } catch (error) {
             console.error('Delete product error:', error);
-            alert('❌ Gagal menghapus produk');
+            setAlertModal({
+                isOpen: true,
+                message: 'Gagal menghapus produk',
+                type: 'error',
+                title: 'Error'
+            });
         }
     };
 
@@ -467,6 +498,27 @@ const Inventory = () => {
                     </div>
                 )}
             </div>
+
+            {/* Confirm Delete Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ isOpen: false, product: null })}
+                onConfirm={confirmDelete}
+                title="Konfirmasi Hapus"
+                message={`Apakah Anda yakin ingin menghapus produk "${confirmModal.product?.name}"?`}
+                confirmText="Hapus"
+                cancelText="Batal"
+                confirmStyle="danger"
+            />
+
+            {/* Alert Modal */}
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                onClose={() => setAlertModal({ isOpen: false, message: '', type: 'info', title: 'Notifikasi' })}
+                title={alertModal.title}
+                message={alertModal.message}
+                type={alertModal.type}
+            />
         </div>
     );
 };
