@@ -18,7 +18,6 @@ const Inventory = () => {
 
     const [formData, setFormData] = useState({
         name: '',
-        sku: '',
         price: '',
         cost: '',
         stock: '',
@@ -181,7 +180,6 @@ const Inventory = () => {
             setImagePreview(null);
             setFormData({
                 name: '',
-                sku: '',
                 price: '',
                 cost: '',
                 stock: '',
@@ -217,7 +215,6 @@ const Inventory = () => {
 
         setFormData({
             name: product.name,
-            sku: product.sku || '',
             price: product.price,
             cost: product.cost || '',
             stock: product.stock,
@@ -294,7 +291,6 @@ const Inventory = () => {
                                 <tr>
                                     <th>Gambar</th>
                                     <th>Nama Produk</th>
-                                    <th>SKU</th>
                                     <th>Kategori</th>
                                     <th>Harga</th>
                                     <th>Stok</th>
@@ -320,7 +316,6 @@ const Inventory = () => {
                                                 )}
                                             </td>
                                             <td>{product.name}</td>
-                                            <td>{product.sku || '-'}</td>
                                             <td>{product.category || '-'}</td>
                                             <td>Rp {product.price.toLocaleString('id-ID')}</td>
                                             <td className={product.stock < 20 ? 'low-stock' : ''}>{product.stock}</td>
@@ -362,17 +357,6 @@ const Inventory = () => {
                                             value={formData.name}
                                             onChange={handleInputChange}
                                             required
-                                            disabled={loading}
-                                        />
-                                    </div>
-
-                                    <div className="form-group">
-                                        <label>SKU</label>
-                                        <input
-                                            type="text"
-                                            name="sku"
-                                            value={formData.sku}
-                                            onChange={handleInputChange}
                                             disabled={loading}
                                         />
                                     </div>
