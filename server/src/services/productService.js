@@ -242,15 +242,26 @@ export async function updateProduct(productId, productData) {
         // Update image if provided
         if (productData.image !== undefined) {
             if (productData.image) {
-                console.log('📸 Updating product image');
+                const imageLength = productData.image.length;
+                console.log('📸 Updating product image:');
+                console.log('   - Base64 length:', imageLength, 'chars');
+                console.log('   - Estimated size:', (imageLength * 0.75 / 1024).toFixed(2), 'KB');
+                console.log('   - First 50 chars:', productData.image.substring(0, 50));
+
                 values.image_128 = productData.image;
                 values.image_256 = productData.image;
+                values.image_1920 = productData.image;
             } else {
+                console.log('⚠️ Image is explicitly set to null/empty - removing image');
                 values.image_128 = false;
                 values.image_256 = false;
+                values.image_1920 = false;
             }
+        } else {
+            console.log('ℹ️ Image not in update data - keeping existing image');
         }
 
+        console.log('🔄 Updating product, fields:', Object.keys(values));
         await getOdooClient().write('product.product', parseInt(productId), values);
         console.log('✅ Product updated');
 

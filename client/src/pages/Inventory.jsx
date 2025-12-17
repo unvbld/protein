@@ -191,7 +191,14 @@ const Inventory = () => {
     const handleEdit = (product) => {
         setEditingProduct(product);
         setImageFile(null);
-        setImagePreview(product.image ? `data:image/png;base64,${product.image}` : null);
+
+        // Show existing image if available
+        if (product.image) {
+            setImagePreview(`data:image/png;base64,${product.image}`);
+        } else {
+            setImagePreview(null);
+        }
+
         setFormData({
             name: product.name,
             sku: product.sku || '',
@@ -200,7 +207,7 @@ const Inventory = () => {
             stock: product.stock,
             unit: product.unit || 'pcs',
             description: product.description || '',
-            image: product.image || null
+            image: null  // Don't include existing image, only new uploads
         });
         setShowForm(true);
     };
