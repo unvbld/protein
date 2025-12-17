@@ -181,33 +181,21 @@ body {
   color: white;
 }
 
-/* Login Page - Split Screen Design */
+/* Login Page - Fullscreen Split Layout */
 .login-page {
   min-height: 100vh;
   display: flex;
-  align-items: center;
-  justify-content: center;
   background: #f8fafc;
-}
-
-.login-container {
-  width: 100%;
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem;
 }
 
 .login-split-container {
   display: grid;
-  grid-template-columns: 480px 1fr;
-  min-height: 650px;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  grid-template-columns: 40% 60%;
+  width: 100%;
+  min-height: 100vh;
 }
 
-/* Left Sidebar - Dark Blue */
+/* Left Sidebar - 40% width */
 .login-sidebar {
   background: #2563eb;
   padding: 4rem 3rem;
@@ -222,33 +210,38 @@ body {
 }
 
 .login-brand h1 {
-  font-size: 2.5rem;
+  font-size: 4.5rem;
   font-weight: 700;
   margin-bottom: 3rem;
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
 }
 
 .login-sidebar-icon {
-  margin: 2rem 0;
+  margin: 3rem 0;
   display: flex;
   justify-content: center;
 }
 
+.login-sidebar-icon svg {
+  width: 200px;
+  height: 200px;
+}
+
 .login-sidebar-title h2 {
-  font-size: 1.75rem;
+  font-size: 2.5rem;
   font-weight: 600;
-  margin-bottom: 0.5rem;
-  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+  margin-top: 3rem;
 }
 
 .login-sidebar-title p {
-  font-size: 1rem;
-  opacity: 0.9;
+  font-size: 1.375rem;
+  opacity: 0.95;
 }
 
-/* Right Form Area - White */
+/* Right Form Area - 60% width */
 .login-form-area {
-  padding: 4rem 5rem;
+  padding: 4rem 6rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -257,26 +250,26 @@ body {
 
 .login-form-container {
   width: 100%;
-  max-width: 550px;
+  max-width: 600px;
 }
 
 .login-form-header {
-  margin-bottom: 2.5rem;
+  margin-bottom: 3rem;
 }
 
 .login-subtitle {
   font-size: 0.875rem;
   font-weight: 600;
   color: #2563eb;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
 }
 
 .login-form-header h2 {
-  font-size: 2.25rem;
+  font-size: 2.5rem;
   font-weight: 700;
   color: #1e293b;
-  margin-top: 0.5rem;
+  margin-top: 0.75rem;
 }
 
 .login-form {
@@ -285,7 +278,7 @@ body {
 
 .btn-login {
   width: 100%;
-  padding: 1rem 1.5rem;
+  padding: 1.125rem 1.5rem;
   background: #2563eb;
   color: white;
   border: none;
@@ -294,7 +287,7 @@ body {
   font-weight: 600;
   cursor: pointer;
   transition: background 0.2s;
-  margin-top: 0.5rem;
+  margin-top: 1rem;
 }
 
 .btn-login:hover:not(:disabled) {
@@ -308,11 +301,11 @@ body {
 
 .error-message {
   margin-top: 1rem;
-  padding: 0.75rem;
+  padding: 0.875rem 1rem;
   background: #fee2e2;
   color: #991b1b;
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
 }
 
 /* Responsive */
@@ -347,16 +340,19 @@ body {
 .form-group select {
   width: 100%;
   padding: 1rem 1.25rem;
-  border: 1px solid var(--border);
+  border: 2px solid #cbd5e1;
   border-radius: 0.5rem;
   font-size: 1.0625rem;
-  transition: border 0.2s;
+  transition: all 0.2s;
+  background: white;
 }
 
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
   outline: none;
-  border-color: var(--primary);
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .login-footer {

@@ -42,7 +42,7 @@ const Login = () => {
                             <h1>SIGWAN ATK</h1>
                         </div>
                         <div className="login-sidebar-icon">
-                            <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <svg width="200" height="200" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <rect x="30" y="20" width="60" height="80" rx="4" fill="white" opacity="0.9" />
                                 <rect x="40" y="35" width="40" height="6" rx="2" fill="#1e40af" />
                                 <rect x="40" y="50" width="40" height="6" rx="2" fill="#1e40af" />
