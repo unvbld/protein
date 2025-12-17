@@ -237,15 +237,17 @@ const POS = () => {
                     >
                         Semua Produk
                     </div>
-                    {categories.map(cat => (
-                        <div
-                            key={cat.id}
-                            className={`category-item ${selectedCategory === cat.id ? 'active' : ''}`}
-                            onClick={() => setSelectedCategory(cat.id)}
-                        >
-                            {cat.name}
-                        </div>
-                    ))}
+                    {categories
+                        .filter(cat => cat.name.toLowerCase() !== 'all')
+                        .map(cat => (
+                            <div
+                                key={cat.id}
+                                className={`category-item ${selectedCategory === cat.id ? 'active' : ''}`}
+                                onClick={() => setSelectedCategory(cat.id)}
+                            >
+                                {cat.name}
+                            </div>
+                        ))}
                 </div>
 
                 {/* Products Section */}
