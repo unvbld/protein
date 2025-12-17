@@ -1,122 +1,134 @@
 import getOdooClient from './odooClient.js';
 
 /**
+ * Format product data from Odoo to our API format
+ */
+function formatProduct(p) {
+    return {
+        id: p.id,
+        name: p.name,
+        sku: p.default_code || '',
+        barcode: p.barcode || '',
+        category: p.categ_id ? p.categ_id[1] : 'Uncategorized',
+        category_id: p.categ_id ? p.categ_id[0] : null,
+        price: p.list_price || 0,
+        cost: p.standard_price || 0,
+        stock: p.qty_available || 0,
+        unit: p.uom_id ? p.uom_id[1] : 'pcs',
+        description: p.description_sale || '',
+        image: p.image_128 || null,
+        image_large: p.image_256 || null
+    };
+}
+
+/**
  * Get all products from Odoo
  */
-export async function getAllProducts(filters = {}) {
+export async function getAllProducts() {
     try {
-        const { search, category, page = 1, limit = 50 } = filters;
+        const products = await getOdooClient().searchRead(
+            'product.product',
+            [['active', '=', true]],
+            [
+                'name', 'default_code', 'barcode', 'categ_id',
+                'list_price', 'standard_price', 'qty_available',
+                'uom_id', 'description_sale',
+                'image_128', 'image_256'
+            ]
+        );
 
-        // Build domain for filtering
-        const domain = [['sale_ok', '=', true]]; // Only products that can be sold
-
-        if (search) {
-            domain.push('|', '|',
-                ['name', 'ilike', search],
-                ['default_code', 'ilike', search],
-                ['barcode', 'ilike', search]
-            );
-        }
-
-        if (category) {
-            domain.push(['categ_id', '=', parseInt(category)]);
-        }
-
-        const offset = (page - 1) * limit;
-        const options = {
-            offset: offset,
-            limit: parseInt(limit),
-            order: 'name asc'
-        };
-
-        // Fields to retrieve
-        const fields = [
-            'id',
-            'name',
-            'default_code',  // SKU/Internal Reference
-            'barcode',
-            'categ_id',      // Category
-            'list_price',    // Sale Price
-            'standard_price', // Cost
-            'qty_available',  // Available Quantity
-            'uom_id',        // Unit of Measure
-            'description_sale',
-            'image_128', 'image_256'      // Product image
-        ];
-
-        // Get products
-        const products = await getOdooClient().searchRead('product.product', domain, fields, options);
-
-        // Get total count
-        const totalIds = await getOdooClient().search('product.product', domain);
-        const total = totalIds.length;
-
-        // Format response
-        const formattedProducts = products.map(p => ({
-            id: p.id,
-            name: p.name,
-            sku: p.default_code || null,
-            barcode: p.barcode || null,
-            category: p.categ_id ? p.categ_id[1] : null,
-            category_id: p.categ_id ? p.categ_id[0] : null,
-            price: p.list_price,
-            cost: p.standard_price,
-            stock: p.qty_available,
-            unit: p.uom_id ? p.uom_id[1] : 'Unit',
-            description: p.description_sale || '',
-            image: p.image_128, image_large: p.image_256 || null
-        }));
-
-        return {
-            products: formattedProducts,
-            pagination: {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                total,
-                totalPages: Math.ceil(total / limit)
-            }
-        };
+        return products.map(formatProduct);
     } catch (error) {
-        console.error('Get products error:', error);
+        console.error('Get all products error:', error);
         throw new Error('Failed to fetch products from Odoo');
     }
 }
 
 /**
- * Get product by ID
+ * Get single product by ID
  */
 export async function getProductById(productId) {
     try {
-        const fields = [
-            'id', 'name', 'default_code', 'barcode', 'categ_id',
-            'list_price', 'standard_price', 'qty_available', 'uom_id',
-            'description_sale', 'image_128', 'image_256'
-        ];
-
-        const products = await getOdooClient().read('product.product', [parseInt(productId)], fields);
+        const products = await getOdooClient().read(
+            'product.product',
+            [parseInt(productId)],
+            [
+                'name', 'default_code', 'barcode', 'categ_id',
+                'list_price', 'standard_price', 'qty_available',
+                'uom_id', 'description_sale',
+                'image_128', 'image_256'
+            ]
+        );
 
         if (!products || products.length === 0) {
             throw new Error('Product not found');
         }
 
-        const p = products[0];
-        return {
-            id: p.id,
-            name: p.name,
-            sku: p.default_code || null,
-            barcode: p.barcode || null,
-            category: p.categ_id ? p.categ_id[1] : null,
-            category_id: p.categ_id ? p.categ_id[0] : null,
-            price: p.list_price,
-            cost: p.standard_price,
-            stock: p.qty_available,
-            unit: p.uom_id ? p.uom_id[1] : 'Unit',
-            description: p.description_sale || '',
-            image: p.image_128, image_large: p.image_256 || null
-        };
+        return formatProduct(products[0]);
     } catch (error) {
-        console.error('Get product error:', error);
-        throw error;
+        console.error('Get product by ID error:', error);
+        throw new Error('Failed to fetch product from Odoo');
+    }
+}
+
+/**
+ * Search products
+ */
+export async function searchProducts(searchTerm) {
+    try {
+        const domain = searchTerm
+            ? ['|', '|', ['name', 'ilike', searchTerm], ['default_code', 'ilike', searchTerm], ['barcode', '=', searchTerm]]
+            : [];
+
+        domain.push(['active', '=', true]);
+
+        const products = await getOdooClient().searchRead(
+            'product.product',
+            domain,
+            [
+                'name', 'default_code', 'barcode', 'categ_id',
+                'list_price', 'standard_price', 'qty_available',
+                'uom_id', 'description_sale',
+                'image_128', 'image_256'
+            ]
+        );
+
+        return products.map(formatProduct);
+    } catch (error) {
+        console.error('Search products error:', error);
+        throw new Error('Failed to search products in Odoo');
+    }
+}
+
+/**
+ * Get products for POS
+ */
+export async function getPOSProducts(searchTerm = '') {
+    try {
+        const domain = [
+            ['active', '=', true],
+            ['sale_ok', '=', true],
+            ['available_in_pos', '=', true]
+        ];
+
+        if (searchTerm) {
+            domain.push('|', '|', ['name', 'ilike', searchTerm], ['default_code', 'ilike', searchTerm], ['barcode', '=', searchTerm]);
+        }
+
+        const products = await getOdooClient().searchRead(
+            'product.product',
+            domain,
+            [
+                'name', 'default_code', 'barcode', 'categ_id',
+                'list_price', 'qty_available',
+                'image_128', 'image_256'
+            ]
+        );
+
+        return products.map(formatProduct);
+    } catch (error) {
+        console.error('Get POS products error:', error);
+        throw new Error('Failed to fetch POS products from Odoo');
     }
 }
 
@@ -125,33 +137,70 @@ export async function getProductById(productId) {
  */
 export async function createProduct(productData) {
     try {
+        console.log('📥 Creating product with data:', {
+            name: productData.name,
+            price: productData.price,
+            stock: productData.stock,
+            hasImage: !!productData.image
+        });
+
+        // Validate and parse numeric fields
+        const price = parseFloat(productData.price);
+        const cost = productData.cost && productData.cost !== '' ? parseFloat(productData.cost) : 0;
+
+        if (isNaN(price)) {
+            throw new Error('Invalid price value');
+        }
+
         const values = {
             name: productData.name,
             default_code: productData.sku || false,
             barcode: productData.barcode || false,
-            categ_id: productData.category_id || 1, // Default category
-            list_price: parseFloat(productData.price),
-            standard_price: productData.cost ? parseFloat(productData.cost) : 0,
+            categ_id: productData.category_id || 1,
+            list_price: price,
+            standard_price: isNaN(cost) ? 0 : cost,
             type: 'product', // Stockable product
             sale_ok: true,
+            available_in_pos: true, // Make available in POS by default
             purchase_ok: true
         };
+
+        // Add image if provided
+        if (productData.image) {
+            console.log('📸 Adding product image, length:', productData.image.length);
+            values.image_128 = productData.image;
+            values.image_256 = productData.image;
+        }
 
         if (productData.description) {
             values.description_sale = productData.description;
         }
 
+        console.log('🚀 Sending to Odoo...');
         const productId = await getOdooClient().create('product.product', values);
+        console.log('✅ Product created with ID:', productId);
 
         // If stock is provided, create initial stock
-        if (productData.stock && productData.stock > 0) {
-            await updateProductStock(productId, productData.stock);
+        if (productData.stock !== undefined && productData.stock !== '') {
+            const stock = parseFloat(productData.stock);
+            console.log('📦 Stock value:', stock, 'isNaN:', isNaN(stock));
+            if (!isNaN(stock) && stock > 0) {
+                console.log('🔄 Setting initial stock:', stock);
+                const stockResult = await updateProductStock(productId, stock);
+                console.log('📦 Stock update result:', stockResult);
+            } else {
+                console.log('⚠️ Stock not set - invalid or zero:', stock);
+            }
+        } else {
+            console.log('⚠️ No stock provided');
         }
 
-        return await getProductById(productId);
+        const createdProduct = await getProductById(productId);
+        console.log('✅ Final product:', { id: createdProduct.id, stock: createdProduct.stock, hasImage: !!createdProduct.image });
+        return createdProduct;
     } catch (error) {
-        console.error('Create product error:', error);
-        throw new Error('Failed to create product in Odoo');
+        console.error('❌ Create product error:', error);
+        throw new Error('Failed to create product in Odoo: ' + error.message);
     }
 }
 
@@ -160,26 +209,54 @@ export async function createProduct(productData) {
  */
 export async function updateProduct(productId, productData) {
     try {
+        console.log('📝 Updating product', productId, 'with data:', {
+            ...productData,
+            image: productData.image ? 'HAS_IMAGE' : 'NO_IMAGE'
+        });
+
         const values = {};
 
         if (productData.name !== undefined) values.name = productData.name;
         if (productData.sku !== undefined) values.default_code = productData.sku || false;
         if (productData.barcode !== undefined) values.barcode = productData.barcode || false;
         if (productData.category_id !== undefined) values.categ_id = productData.category_id;
-        if (productData.price !== undefined && productData.price !== '') { const p = parseFloat(productData.price); if (!isNaN(p)) values.list_price = p; }
-        if (productData.cost !== undefined && productData.cost !== '') { const c = parseFloat(productData.cost); if (!isNaN(c)) values.standard_price = c; }
+        if (productData.price !== undefined && productData.price !== '') {
+            const p = parseFloat(productData.price);
+            if (!isNaN(p)) values.list_price = p;
+        }
+        if (productData.cost !== undefined && productData.cost !== '') {
+            const c = parseFloat(productData.cost);
+            if (!isNaN(c)) values.standard_price = c;
+        }
         if (productData.description !== undefined) values.description_sale = productData.description;
 
+        // Update image if provided
+        if (productData.image !== undefined) {
+            if (productData.image) {
+                console.log('📸 Updating product image');
+                values.image_128 = productData.image;
+                values.image_256 = productData.image;
+            } else {
+                values.image_128 = false;
+                values.image_256 = false;
+            }
+        }
+
         await getOdooClient().write('product.product', parseInt(productId), values);
+        console.log('✅ Product updated');
 
         // Update stock if provided
-        if (productData.stock !== undefined) {
-            await updateProductStock(productId, productData.stock);
+        if (productData.stock !== undefined && productData.stock !== '') {
+            const stock = parseFloat(productData.stock);
+            if (!isNaN(stock)) {
+                console.log('🔄 Updating stock to:', stock);
+                await updateProductStock(productId, stock);
+            }
         }
 
         return await getProductById(productId);
     } catch (error) {
-        console.error('Update product error:', error);
+        console.error('❌ Update product error:', error);
         throw new Error('Failed to update product in Odoo');
     }
 }
@@ -204,30 +281,90 @@ export async function deleteProduct(productId) {
  * Update product stock in Odoo
  */
 async function updateProductStock(productId, newQty) {
-  try {
-    const product = await getOdooClient().read('product.product', [parseInt(productId)], ['type']);
-    if (!product || product.length === 0 || product[0].type !== 'product') {
-      console.log('? Skipping stock update (product not stockable or not found)');
-      return false;
+    try {
+        console.log('📦 updateProductStock called with:', { productId, newQty });
+
+        // First check if product is stockable
+        const product = await getOdooClient().read('product.product', [parseInt(productId)], ['type']);
+        console.log('Product type check:', product);
+
+        if (!product || product.length === 0 || product[0].type !== 'product') {
+            console.log('⚠️ Skipping stock update (product not stockable or not found)');
+            return false;
+        }
+
+        // Get the default warehouse location (WH/Stock)
+        const locations = await getOdooClient().searchRead(
+            'stock.location',
+            [
+                ['usage', '=', 'internal'],
+                ['name', '=', 'Stock']  // Default stock location
+            ],
+            ['id', 'name'],
+            { limit: 1 }
+        );
+
+        console.log('Stock location found:', locations);
+
+        if (locations.length === 0) {
+            console.log('⚠️ No stock location found, trying any internal location');
+            const anyLocation = await getOdooClient().searchRead(
+                'stock.location',
+                [['usage', '=', 'internal']],
+                ['id', 'name'],
+                { limit: 1 }
+            );
+
+            if (anyLocation.length === 0) {
+                console.log('❌ No internal location found at all');
+                return false;
+            }
+            locations[0] = anyLocation[0];
+        }
+
+        const locationId = locations[0].id;
+        console.log('Using location ID:', locationId);
+
+        // Search for existing quant
+        const existingQuants = await getOdooClient().searchRead(
+            'stock.quant',
+            [
+                ['product_id', '=', parseInt(productId)],
+                ['location_id', '=', locationId]
+            ],
+            ['id', 'quantity', 'reserved_quantity'],
+            { limit: 1 }
+        );
+
+        console.log('Existing quants:', existingQuants);
+
+        const qty = parseFloat(newQty);
+
+        if (existingQuants.length > 0) {
+            // Update existing quant - simply update quantity
+            console.log('Updating existing quant:', existingQuants[0].id, 'to quantity:', qty);
+            await getOdooClient().write('stock.quant', existingQuants[0].id, {
+                quantity: qty
+            });
+            console.log('✅ Stock updated to:', qty);
+            return true;
+        } else {
+            // Create new quant with quantity directly
+            console.log('Creating new quant with quantity:', qty);
+            const quantId = await getOdooClient().create('stock.quant', {
+                product_id: parseInt(productId),
+                location_id: locationId,
+                quantity: qty
+            });
+
+            console.log('✅ Stock quant created:', quantId, 'with qty:', qty);
+            return true;
+        }
+    } catch (error) {
+        console.error('❌ Update stock error:', error);
+        console.error('Error details:', error.faultString || error.message);
+        return false;
     }
-    const existingQuants = await getOdooClient().searchRead('stock.quant', [['product_id', '=', parseInt(productId)], ['location_id.usage', '=', 'internal']], ['id'], { limit: 1 });
-    if (existingQuants.length > 0) {
-      await getOdooClient().write('stock.quant', existingQuants[0].id, { inventory_quantity: parseFloat(newQty) });
-      try { await getOdooClient().execute('stock.quant', 'action_apply_inventory', [[existingQuants[0].id]]); } catch (e) {}
-      console.log(' Stock updated');
-      return true;
-    } else {
-      const locations = await getOdooClient().searchRead('stock.location', [['usage', '=', 'internal'], ['company_id', '!=', false]], ['id'], { limit: 1 });
-      if (locations.length === 0) return false;
-      const quantId = await getOdooClient().create('stock.quant', { product_id: parseInt(productId), location_id: locations[0].id, inventory_quantity: parseFloat(newQty) });
-      if (quantId) { try { await getOdooClient().execute('stock.quant', 'action_apply_inventory', [[quantId]]); } catch (e) {} }
-      console.log(' Stock created');
-      return true;
-    }
-  } catch (error) {
-    console.error('Update stock error:', error.message);
-    return false;
-  }
 }
 
 /**
@@ -238,19 +375,12 @@ export async function getCategories() {
         const categories = await getOdooClient().searchRead(
             'product.category',
             [],
-            ['id', 'name', 'parent_id'],
-            { order: 'name asc' }
+            ['id', 'name'],
+            { order: 'name ASC' }
         );
-
-        return categories.map(c => ({
-            id: c.id,
-            name: c.name,
-            parent: c.parent_id ? c.parent_id[1] : null
-        }));
+        return categories;
     } catch (error) {
         console.error('Get categories error:', error);
         throw new Error('Failed to fetch categories from Odoo');
     }
 }
-
-
