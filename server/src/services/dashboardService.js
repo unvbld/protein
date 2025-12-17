@@ -8,10 +8,10 @@ export async function getDashboardStats() {
         const today = new Date().toISOString().split('T')[0];
         const thisMonth = new Date().toISOString().slice(0, 7);
 
-        // Today's sales
+        // Today's sales - using sale.order instead of pos.order
         const todayOrders = await getOdooClient().searchRead(
-            'pos.order',
-            [['date_order', '>=', today + ' 00:00:00'], ['state', 'in', ['paid', 'done', 'invoiced']]],
+            'sale.order',
+            [['date_order', '>=', today + ' 00:00:00'], ['state', 'in', ['sale', 'done']]],
             ['amount_total']
         );
 
@@ -22,8 +22,8 @@ export async function getDashboardStats() {
 
         // This month's sales
         const monthOrders = await getOdooClient().searchRead(
-            'pos.order',
-            [['date_order', '>=', thisMonth + '-01 00:00:00'], ['state', 'in', ['paid', 'done', 'invoiced']]],
+            'sale.order',
+            [['date_order', '>=', thisMonth + '-01 00:00:00'], ['state', 'in', ['sale', 'done']]],
             ['amount_total']
         );
 
@@ -45,8 +45,8 @@ export async function getDashboardStats() {
 
         // Total revenue (all time)
         const allOrders = await getOdooClient().searchRead(
-            'pos.order',
-            [['state', 'in', ['paid', 'done', 'invoiced']]],
+            'sale.order',
+            [['state', 'in', ['sale', 'done']]],
             ['amount_total']
         );
 
@@ -94,10 +94,10 @@ export async function getSalesData(period = 'week') {
         }
 
         const orders = await getOdooClient().searchRead(
-            'pos.order',
+            'sale.order',
             [
                 ['date_order', '>=', startDate.toISOString()],
-                ['state', 'in', ['paid', 'done', 'invoiced']]
+                ['state', 'in', ['sale', 'done']]
             ],
             ['date_order', 'amount_total']
         );
@@ -134,11 +134,11 @@ export async function getSalesData(period = 'week') {
  */
 export async function getTopProducts(limit = 10) {
     try {
-        // Get all order lines
+        // Get all sale order lines
         const orderLines = await getOdooClient().searchRead(
-            'pos.order.line',
+            'sale.order.line',
             [],
-            ['product_id', 'qty', 'price_subtotal']
+            ['product_id', 'product_uom_qty', 'price_subtotal']
         );
 
         // Group by product
@@ -156,7 +156,7 @@ export async function getTopProducts(limit = 10) {
                 };
             }
 
-            productStats[productId].total_sold += line.qty;
+            productStats[productId].total_sold += line.product_uom_qty;
             productStats[productId].total_revenue += line.price_subtotal;
         });
 
@@ -167,7 +167,7 @@ export async function getTopProducts(limit = 10) {
 
         // Get current stock for these products
         for (const product of topProducts) {
-            const productData = await getOdooClient().read('product.product', [product.product_id], ['qty_available']);
+            const productData = await getOdooClient().read('product.product', product.product_id, ['qty_available']);
             product.current_stock = productData[0].qty_available;
         }
 
