@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
+import { AlertModal, ConfirmModal } from '../components/common/Modal';
 import { pos, products as productsAPI } from '../services/api';
 
 const POS = () => {
@@ -12,6 +13,10 @@ const POS = () => {
     const [showPayment, setShowPayment] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [amountPaid, setAmountPaid] = useState('');
+
+    // Modal states
+    const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', type: 'warning', title: 'Peringatan' });
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, paymentData: null });
 
     useEffect(() => {
         loadProducts();
@@ -58,7 +63,12 @@ const POS = () => {
 
     const addToCart = (product) => {
         if (product.stock <= 0) {
-            alert('Stok tidak tersedia');
+            setAlertModal({
+                isOpen: true,
+                message: `Stok produk "${product.name}" tidak tersedia`,
+                type: 'warning',
+                title: 'Stok Habis'
+            });
             return;
         }
 
@@ -66,7 +76,12 @@ const POS = () => {
 
         if (existingItem) {
             if (existingItem.quantity >= product.stock) {
-                alert('Stok tidak cukup');
+                setAlertModal({
+                    isOpen: true,
+                    message: `Stok produk "${product.name}" tidak cukup. Tersedia: ${product.stock}`,
+                    type: 'warning',
+                    title: 'Stok Tidak Cukup'
+                });
                 return;
             }
             setCart(cart.map(item =>
@@ -87,6 +102,7 @@ const POS = () => {
 
     const updateQuantity = (productId, newQty) => {
         const product = products.find(p => p.id === productId);
+        const cartItem = cart.find(item => item.product_id === productId);
 
         if (newQty <= 0) {
             removeFromCart(productId);
@@ -94,7 +110,12 @@ const POS = () => {
         }
 
         if (product && newQty > product.stock) {
-            alert('Stok tidak cukup');
+            setAlertModal({
+                isOpen: true,
+                message: `Stok produk "${cartItem?.product_name}" tidak cukup. Tersedia: ${product.stock}`,
+                type: 'warning',
+                title: 'Stok Tidak Cukup'
+            });
             return;
         }
 
@@ -121,21 +142,47 @@ const POS = () => {
 
     const handleCheckout = () => {
         if (cart.length === 0) {
-            alert('Keranjang masih kosong');
+            setAlertModal({
+                isOpen: true,
+                message: 'Keranjang masih kosong',
+                type: 'warning',
+                title: 'Peringatan'
+            });
             return;
         }
         setShowPayment(true);
         setAmountPaid(getTotalAmount().toString());
     };
 
-    const processPayment = async (paymentMethod = 'cash') => {
+    const processPayment = (paymentMethod = 'cash') => {
         const total = getTotalAmount();
         const paid = parseFloat(amountPaid) || 0;
 
         if (paid < total) {
-            alert('Jumlah pembayaran kurang');
+            setAlertModal({
+                isOpen: true,
+                message: 'Jumlah pembayaran kurang dari total belanja',
+                type: 'warning',
+                title: 'Pembayaran Kurang'
+            });
             return;
         }
+
+        // Show confirmation modal
+        const change = paid - total;
+        setConfirmModal({
+            isOpen: true,
+            paymentData: {
+                total,
+                paid,
+                change,
+                paymentMethod
+            }
+        });
+    };
+
+    const confirmPayment = async () => {
+        const { total, paid, change, paymentMethod } = confirmModal.paymentData;
 
         try {
             setProcessing(true);
@@ -150,8 +197,13 @@ const POS = () => {
 
             const response = await pos.createOrder(orderData);
 
-            const change = getChange();
-            alert(`✅ Transaksi berhasil!\n\nNo. Order: ${response.data.order_number}\nTotal: Rp ${total.toLocaleString('id-ID')}\nBayar: Rp ${paid.toLocaleString('id-ID')}\nKembali: Rp ${change.toLocaleString('id-ID')}`);
+            // Show success modal
+            setAlertModal({
+                isOpen: true,
+                message: `Transaksi berhasil!\n\nNo. Order: ${response.data.order_number}\nTotal: Rp ${total.toLocaleString('id-ID')}\nBayar: Rp ${paid.toLocaleString('id-ID')}\nKembali: Rp ${change.toLocaleString('id-ID')}`,
+                type: 'success',
+                title: 'Pembayaran Berhasil'
+            });
 
             // Reset
             setCart([]);
@@ -160,7 +212,12 @@ const POS = () => {
             loadProducts(search, selectedCategory); // Refresh to update stock
         } catch (error) {
             console.error('Payment error:', error);
-            alert(error.response?.data?.error || 'Gagal memproses pembayaran');
+            setAlertModal({
+                isOpen: true,
+                message: error.response?.data?.error || 'Gagal memproses pembayaran',
+                type: 'error',
+                title: 'Error'
+            });
         } finally {
             setProcessing(false);
         }
@@ -178,17 +235,19 @@ const POS = () => {
                         className={`category-item ${!selectedCategory ? 'active' : ''}`}
                         onClick={() => setSelectedCategory(null)}
                     >
-                        📦 Semua Produk
+                        Semua Produk
                     </div>
-                    {categories.map(cat => (
-                        <div
-                            key={cat.id}
-                            className={`category-item ${selectedCategory === cat.id ? 'active' : ''}`}
-                            onClick={() => setSelectedCategory(cat.id)}
-                        >
-                            {cat.name}
-                        </div>
-                    ))}
+                    {categories
+                        .filter(cat => cat.name.toLowerCase() !== 'all')
+                        .map(cat => (
+                            <div
+                                key={cat.id}
+                                className={`category-item ${selectedCategory === cat.id ? 'active' : ''}`}
+                                onClick={() => setSelectedCategory(cat.id)}
+                            >
+                                {cat.name}
+                            </div>
+                        ))}
                 </div>
 
                 {/* Products Section */}
@@ -197,7 +256,7 @@ const POS = () => {
                         <input
                             type="text"
                             className="pos-search-input"
-                            placeholder="🔍 Cari produk..."
+                            placeholder="Cari produk..."
                             value={search}
                             onChange={handleSearch}
                         />
@@ -227,7 +286,7 @@ const POS = () => {
                                             />
                                         ) : null}
                                         <div className="pos-image-placeholder" style={{ display: product.image_large || product.image ? 'none' : 'flex' }}>
-                                            📦
+
                                         </div>
                                     </div>
                                     <div className="pos-product-info">
@@ -264,7 +323,7 @@ const POS = () => {
                                             {item.image ? (
                                                 <img src={`data:image/png;base64,${item.image}`} alt={item.product_name} />
                                             ) : (
-                                                <div className="cart-image-placeholder">📦</div>
+                                                <div className="cart-image-placeholder"></div>
                                             )}
                                         </div>
                                         <div className="cart-item-details">
@@ -297,7 +356,7 @@ const POS = () => {
                                     </span>
                                 </div>
                                 <button className="pos-pay-button" onClick={handleCheckout}>
-                                    💳 Bayar
+                                    Bayar
                                 </button>
                             </div>
                         </>
@@ -345,21 +404,7 @@ const POS = () => {
                                     onClick={() => processPayment('cash')}
                                     disabled={processing || getChange() < 0}
                                 >
-                                    💵 Cash
-                                </button>
-                                <button
-                                    className="payment-method-btn card"
-                                    onClick={() => processPayment('card')}
-                                    disabled={processing || getChange() < 0}
-                                >
-                                    💳 Kartu
-                                </button>
-                                <button
-                                    className="payment-method-btn ewallet"
-                                    onClick={() => processPayment('ewallet')}
-                                    disabled={processing || getChange() < 0}
-                                >
-                                    📱 E-Wallet
+                                    Cash
                                 </button>
                             </div>
                         </div>
@@ -374,6 +419,30 @@ const POS = () => {
                     </div>
                 </div>
             )}
+
+            {/* Confirm Payment Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ isOpen: false, paymentData: null })}
+                onConfirm={confirmPayment}
+                title="Konfirmasi Pembayaran"
+                message={confirmModal.paymentData ?
+                    `Total Belanja: Rp ${confirmModal.paymentData.total.toLocaleString('id-ID')}\nJumlah Bayar: Rp ${confirmModal.paymentData.paid.toLocaleString('id-ID')}\nKembalian: Rp ${confirmModal.paymentData.change.toLocaleString('id-ID')}\n\nProses pembayaran?`
+                    : ''
+                }
+                confirmText="Proses"
+                cancelText="Batal"
+                confirmStyle="primary"
+            />
+
+            {/* Alert Modal */}
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                onClose={() => setAlertModal({ isOpen: false, message: '', type: 'warning', title: 'Peringatan' })}
+                title={alertModal.title}
+                message={alertModal.message}
+                type={alertModal.type}
+            />
         </div>
     );
 };

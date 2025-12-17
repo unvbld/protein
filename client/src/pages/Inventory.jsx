@@ -1,34 +1,56 @@
 import { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
-import { products } from '../services/api';
+import { ConfirmModal, AlertModal } from '../components/common/Modal';
+import { products, categories } from '../services/api';
 
 const Inventory = () => {
     const [productList, setProductList] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [imageFile, setImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [uploading, setUploading] = useState(false);
+
+    // Category states
+    const [categoryList, setCategoryList] = useState([]);
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
+    const [categoryFormData, setCategoryFormData] = useState({ name: '' });
+
+    // Modal states
+    const [confirmModal, setConfirmModal] = useState({ isOpen: false, product: null });
+    const [alertModal, setAlertModal] = useState({ isOpen: false, message: '', type: 'info', title: 'Notifikasi' });
+
     const [formData, setFormData] = useState({
         name: '',
-        sku: '',
         price: '',
         cost: '',
         stock: '',
         unit: 'pcs',
-        description: ''
+        description: '',
+        category_id: '',
+        image: null
     });
 
     useEffect(() => {
         loadProducts();
+        loadCategories();
     }, []);
 
     const loadProducts = async () => {
         try {
             setLoading(true);
             const response = await products.getAll();
-            setProductList(response.data.products);
+            console.log('API response:', response);
+
+            // Handle different response structures
+            const productData = response.data?.products || response.data || [];
+            setProductList(Array.isArray(productData) ? productData : []);
         } catch (error) {
             console.error('Load products error:', error);
-            alert('Gagal memuat produk');
+            setProductList([]); // Set empty array on error
+            alert('Gagal memuat produk: ' + (error.message || 'Unknown error'));
         } finally {
             setLoading(false);
         }
@@ -41,65 +63,299 @@ const Inventory = () => {
         });
     };
 
+    const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.8) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+
+            reader.onload = (event) => {
+                const img = new Image();
+                img.src = event.target.result;
+
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+
+                    // Calculate new dimensions
+                    if (width > height) {
+                        if (width > maxWidth) {
+                            height = (height * maxWidth) / width;
+                            width = maxWidth;
+                        }
+                    } else {
+                        if (height > maxHeight) {
+                            width = (width * maxHeight) / height;
+                            height = maxHeight;
+                        }
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    // Convert to base64
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                    resolve(compressedBase64);
+                };
+
+                img.onerror = (error) => reject(error);
+            };
+
+            reader.onerror = (error) => reject(error);
+        });
+    };
+
+    const handleImageChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            alert('File harus berupa gambar');
+            e.target.value = '';
+            return;
+        }
+
+        try {
+            setUploading(true);
+
+            const fileSizeMB = (file.size / (1024 * 1024)).toFixed(2);
+            console.log(`📁 Original file: ${fileSizeMB} MB`);
+
+            // Compress image with smaller dimensions for Odoo
+            const compressedDataUrl = await compressImage(file, 600, 600, 0.85);
+            const base64 = compressedDataUrl.split(',')[1];
+
+            const compressedSizeKB = (base64.length * 0.75 / 1024).toFixed(2);
+            console.log(`✅ Compressed to: ${compressedSizeKB} KB (base64 length: ${base64.length})`);
+
+            // Validation - Odoo image field usually accepts up to ~3MB base64
+            if (base64.length > 3 * 1024 * 1024) {
+                alert('Gambar masih terlalu besar setelah kompresi. Silakan pilih gambar yang lebih kecil.');
+                e.target.value = '';
+                setUploading(false);
+                return;
+            }
+
+            setImageFile(file);
+            setImagePreview(compressedDataUrl);
+            setFormData(prevData => ({
+                ...prevData,
+                image: base64
+            }));
+
+            console.log('✅ Image ready to upload, size:', compressedSizeKB, 'KB');
+
+        } catch (error) {
+            console.error('Image processing error:', error);
+            alert('Gagal memproses gambar: ' + error.message);
+            e.target.value = '';
+        } finally {
+            setUploading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         try {
+            setLoading(true);
+
+            // Prepare data - only include image if it was changed
+            const dataToSend = {
+                name: formData.name,
+                price: formData.price,
+                cost: formData.cost,
+                stock: formData.stock,
+                unit: formData.unit,
+                description: formData.description,
+                category_id: formData.category_id
+            };
+
+            // Only include image if user uploaded a new one
+            if (formData.image) {
+                dataToSend.image = formData.image;
+            }
+
             if (editingProduct) {
-                await products.update(editingProduct.id, formData);
-                alert('Produk berhasil diupdate');
+                await products.update(editingProduct.id, dataToSend);
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Produk berhasil diperbarui',
+                    type: 'success',
+                    title: 'Berhasil'
+                });
             } else {
-                await products.create(formData);
-                alert('Produk berhasil ditambahkan');
+                await products.create(dataToSend);
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Produk berhasil ditambahkan',
+                    type: 'success',
+                    title: 'Berhasil'
+                });
             }
 
             setShowForm(false);
             setEditingProduct(null);
+            setImageFile(null);
+            setImagePreview(null);
             setFormData({
                 name: '',
-                sku: '',
                 price: '',
                 cost: '',
                 stock: '',
                 unit: 'pcs',
-                description: ''
+                description: '',
+                category_id: '',
+                image: null
             });
             loadProducts();
         } catch (error) {
             console.error('Save product error:', error);
-            alert(error.response?.data?.error || 'Gagal menyimpan produk');
+            const errorMsg = error.response?.data?.error || error.message || 'Gagal menyimpan produk';
+            setAlertModal({
+                isOpen: true,
+                message: errorMsg,
+                type: 'error',
+                title: 'Error'
+            });
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleEdit = (product) => {
         setEditingProduct(product);
+        setImageFile(null);
+
+        // Show existing image if available
+        if (product.image) {
+            setImagePreview(`data:image/png;base64,${product.image}`);
+        } else {
+            setImagePreview(null);
+        }
+
         setFormData({
             name: product.name,
-            sku: product.sku || '',
             price: product.price,
             cost: product.cost || '',
             stock: product.stock,
             unit: product.unit || 'pcs',
-            description: product.description || ''
+            description: product.description || '',
+            image: null  // Don't include existing image, only new uploads
         });
         setShowForm(true);
     };
 
-    const handleDelete = async (product) => {
-        if (!confirm(`Hapus produk "${product.name}"?`)) return;
+    const handleDelete = (product) => {
+        setConfirmModal({
+            isOpen: true,
+            product: product
+        });
+    };
 
+    const confirmDelete = async () => {
         try {
-            await products.delete(product.id);
-            alert('Produk berhasil dihapus');
+            await products.delete(confirmModal.product.id);
+            setAlertModal({
+                isOpen: true,
+                message: 'Produk berhasil dihapus',
+                type: 'success',
+                title: 'Berhasil'
+            });
             loadProducts();
         } catch (error) {
             console.error('Delete product error:', error);
-            alert('Gagal menghapus produk');
+            setAlertModal({
+                isOpen: true,
+                message: 'Gagal menghapus produk',
+                type: 'error',
+                title: 'Error'
+            });
         }
     };
 
+    const loadCategories = async () => {
+        try {
+            const response = await categories.getAll();
+            setCategoryList(response.data || []);
+        } catch (error) {
+            console.error('Load categories error:', error);
+        }
+    };
+
+    const handleSaveCategory = async () => {
+        try {
+            if (!categoryFormData.name.trim()) {
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Nama kategori harus diisi',
+                    type: 'warning',
+                    title: 'Peringatan'
+                });
+                return;
+            }
+
+            if (editingCategory) {
+                await categories.update(editingCategory.id, categoryFormData);
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Kategori berhasil diperbarui',
+                    type: 'success',
+                    title: 'Berhasil'
+                });
+            } else {
+                await categories.create(categoryFormData);
+                setAlertModal({
+                    isOpen: true,
+                    message: 'Kategori berhasil ditambahkan',
+                    type: 'success',
+                    title: 'Berhasil'
+                });
+            }
+
+            loadCategories();
+            setShowCategoryModal(false);
+            setEditingCategory(null);
+            setCategoryFormData({ name: '' });
+        } catch (error) {
+            console.error('Save category error:', error);
+            setAlertModal({
+                isOpen: true,
+                message: error.response?.data?.error || 'Gagal menyimpan kategori',
+                type: 'error',
+                title: 'Error'
+            });
+        }
+    };
+
+    const handleDeleteCategory = async (category) => {
+        try {
+            await categories.delete(category.id);
+            setAlertModal({
+                isOpen: true,
+                message: 'Kategori berhasil dihapus',
+                type: 'success',
+                title: 'Berhasil'
+            });
+            loadCategories();
+        } catch (error) {
+            console.error('Delete category error:', error);
+            setAlertModal({
+                isOpen: true,
+                message: error.response?.data?.error || 'Gagal menghapus kategori',
+                type: 'error',
+                title: 'Error'
+            });
+        }
+    };
     const handleAddNew = () => {
         setEditingProduct(null);
+        setImageFile(null);
+        setImagePreview(null);
         setFormData({
             name: '',
             sku: '',
@@ -107,7 +363,8 @@ const Inventory = () => {
             cost: '',
             stock: '',
             unit: 'pcs',
-            description: ''
+            description: '',
+            image: null
         });
         setShowForm(true);
     };
@@ -118,21 +375,26 @@ const Inventory = () => {
 
             <div className="content-container">
                 <div className="page-header">
-                    <h1>📦 Manajemen Inventory</h1>
-                    <button className="btn btn-primary" onClick={handleAddNew}>
-                        + Tambah Produk
-                    </button>
+                    <h1>Manajemen Inventory</h1>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-outline" onClick={() => setShowCategoryModal(true)}>
+                            Kelola Kategori
+                        </button>
+                        <button className="btn btn-primary" onClick={handleAddNew}>
+                            + Tambah Produk
+                        </button>
+                    </div>
                 </div>
 
-                {loading ? (
+                {loading && !showForm ? (
                     <div className="loading">Memuat data...</div>
                 ) : (
                     <div className="table-container">
                         <table className="data-table">
                             <thead>
                                 <tr>
+                                    <th>Gambar</th>
                                     <th>Nama Produk</th>
-                                    <th>SKU</th>
                                     <th>Kategori</th>
                                     <th>Harga</th>
                                     <th>Stok</th>
@@ -141,31 +403,51 @@ const Inventory = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {productList.map(product => (
-                                    <tr key={product.id}>
-                                        <td>{product.name}</td>
-                                        <td>{product.sku || '-'}</td>
-                                        <td>{product.category || '-'}</td>
-                                        <td>Rp {product.price.toLocaleString('id-ID')}</td>
-                                        <td className={product.stock < 20 ? 'low-stock' : ''}>{product.stock}</td>
-                                        <td>{product.unit}</td>
-                                        <td>
-                                            <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(product)}>
-                                                Edit
-                                            </button>
-                                            <button className="btn btn-sm btn-danger" onClick={() => handleDelete(product)}>
-                                                Hapus
-                                            </button>
+                                {productList && productList.length > 0 ? (
+                                    productList.map(product => (
+                                        <tr key={product.id}>
+                                            <td>
+                                                {product.image ? (
+                                                    <img
+                                                        src={`data:image/png;base64,${product.image}`}
+                                                        alt={product.name}
+                                                        className="product-thumbnail"
+                                                    />
+                                                ) : (
+                                                    <div className="product-image-placeholder">
+
+                                                    </div>
+                                                )}
+                                            </td>
+                                            <td>{product.name}</td>
+                                            <td>{product.category || '-'}</td>
+                                            <td>Rp {product.price.toLocaleString('id-ID')}</td>
+                                            <td className={product.stock < 20 ? 'low-stock' : ''}>{product.stock}</td>
+                                            <td>{product.unit}</td>
+                                            <td>
+                                                <button className="btn btn-sm btn-secondary" onClick={() => handleEdit(product)}>
+                                                    Edit
+                                                </button>
+                                                <button className="btn btn-sm btn-danger" onClick={() => handleDelete(product)}>
+                                                    Hapus
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan="8" style={{ textAlign: 'center', padding: '2rem', color: '#64748b' }}>
+                                            {loading ? 'Memuat data...' : 'Tidak ada produk'}
                                         </td>
                                     </tr>
-                                ))}
+                                )}
                             </tbody>
                         </table>
                     </div>
                 )}
 
                 {showForm && (
-                    <div className="modal-overlay" onClick={() => setShowForm(false)}>
+                    <div className="modal-overlay" onClick={() => !loading && setShowForm(false)}>
                         <div className="modal-content form-modal" onClick={(e) => e.stopPropagation()}>
                             <h3>{editingProduct ? 'Edit Produk' : 'Tambah Produk Baru'}</h3>
 
@@ -179,17 +461,25 @@ const Inventory = () => {
                                             value={formData.name}
                                             onChange={handleInputChange}
                                             required
+                                            disabled={loading}
                                         />
                                     </div>
 
                                     <div className="form-group">
-                                        <label>SKU</label>
-                                        <input
-                                            type="text"
-                                            name="sku"
-                                            value={formData.sku}
+                                        <label>Kategori</label>
+                                        <select
+                                            name="category_id"
+                                            value={formData.category_id}
                                             onChange={handleInputChange}
-                                        />
+                                            disabled={loading}
+                                        >
+                                            <option value="">Pilih Kategori</option>
+                                            {categoryList.map(cat => (
+                                                <option key={cat.id} value={cat.id}>
+                                                    {cat.name}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
 
                                     <div className="form-group">
@@ -201,6 +491,7 @@ const Inventory = () => {
                                             onChange={handleInputChange}
                                             required
                                             min="0"
+                                            disabled={loading}
                                         />
                                     </div>
 
@@ -212,6 +503,7 @@ const Inventory = () => {
                                             value={formData.cost}
                                             onChange={handleInputChange}
                                             min="0"
+                                            disabled={loading}
                                         />
                                     </div>
 
@@ -224,6 +516,7 @@ const Inventory = () => {
                                             onChange={handleInputChange}
                                             required
                                             min="0"
+                                            disabled={loading}
                                         />
                                     </div>
 
@@ -234,8 +527,47 @@ const Inventory = () => {
                                             name="unit"
                                             value={formData.unit}
                                             onChange={handleInputChange}
+                                            disabled={loading}
                                         />
                                     </div>
+                                </div>
+
+                                <div className="form-group">
+                                    <label>Gambar Produk</label>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        onChange={handleImageChange}
+                                        disabled={uploading || loading}
+                                    />
+                                    <small style={{ color: '#64748b', fontSize: '0.875rem', display: 'block', marginTop: '0.5rem' }}>
+                                        📸 Format: JPG, PNG. Gambar akan otomatis dikompres (max 800x800px)
+                                    </small>
+
+                                    {uploading && (
+                                        <div style={{ marginTop: '1rem', color: '#2563eb' }}>
+                                            ⏳ Memproses gambar...
+                                        </div>
+                                    )}
+
+                                    {imagePreview && !uploading && (
+                                        <div style={{ marginTop: '1rem' }}>
+                                            <img
+                                                src={imagePreview}
+                                                alt="Preview"
+                                                style={{
+                                                    maxWidth: '200px',
+                                                    maxHeight: '200px',
+                                                    borderRadius: '8px',
+                                                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                                    border: '2px solid #e2e8f0'
+                                                }}
+                                            />
+                                            <p style={{ fontSize: '0.875rem', color: '#10b981', marginTop: '0.5rem' }}>
+                                                ✅ Gambar siap diupload
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="form-group">
@@ -245,14 +577,24 @@ const Inventory = () => {
                                         value={formData.description}
                                         onChange={handleInputChange}
                                         rows="3"
+                                        disabled={loading}
                                     />
                                 </div>
 
                                 <div className="form-actions">
-                                    <button type="submit" className="btn btn-primary">
-                                        {editingProduct ? 'Update' : 'Tambah'}
+                                    <button
+                                        type="submit"
+                                        className="btn btn-primary"
+                                        disabled={loading || uploading}
+                                    >
+                                        {loading ? '⏳ Menyimpan...' : (editingProduct ? 'Update' : 'Tambah')}
                                     </button>
-                                    <button type="button" className="btn btn-outline" onClick={() => setShowForm(false)}>
+                                    <button
+                                        type="button"
+                                        className="btn btn-outline"
+                                        onClick={() => setShowForm(false)}
+                                        disabled={loading}
+                                    >
                                         Batal
                                     </button>
                                 </div>
@@ -261,6 +603,104 @@ const Inventory = () => {
                     </div>
                 )}
             </div>
+
+            {/* Category Management Modal */}
+            {showCategoryModal && (
+                <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
+                    <div className="modal-container modal-medium" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h3 className="modal-title">Kelola Kategori</h3>
+                            <button className="modal-close" onClick={() => setShowCategoryModal(false)}>×</button>
+                        </div>
+                        <div className="modal-body">
+                            <div style={{ marginBottom: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Nama kategori baru"
+                                        value={categoryFormData.name}
+                                        onChange={(e) => setCategoryFormData({ name: e.target.value })}
+                                        style={{ flex: 1 }}
+                                    />
+                                    <button className="btn btn-primary" onClick={handleSaveCategory}>
+                                        {editingCategory ? 'Update' : 'Tambah'}
+                                    </button>
+                                    {editingCategory && (
+                                        <button
+                                            className="btn btn-outline"
+                                            onClick={() => {
+                                                setEditingCategory(null);
+                                                setCategoryFormData({ name: '' });
+                                            }}
+                                        >
+                                            Batal
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                                {categoryList.length === 0 ? (
+                                    <p style={{ textAlign: 'center', color: '#64748b' }}>Belum ada kategori</p>
+                                ) : (
+                                    <table className="table">
+                                        <thead>
+                                            <tr>
+                                                <th>Nama Kategori</th>
+                                                <th style={{ width: '150px' }}>Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {categoryList.map(cat => (
+                                                <tr key={cat.id}>
+                                                    <td>{cat.name}</td>
+                                                    <td>
+                                                        <button
+                                                            className="btn btn-sm btn-secondary"
+                                                            onClick={() => {
+                                                                setEditingCategory(cat);
+                                                                setCategoryFormData({ name: cat.name });
+                                                            }}
+                                                        >
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            className="btn btn-sm btn-danger"
+                                                            onClick={() => handleDeleteCategory(cat)}
+                                                        >
+                                                            Hapus
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Confirm Delete Modal */}
+            <ConfirmModal
+                isOpen={confirmModal.isOpen}
+                onClose={() => setConfirmModal({ isOpen: false, product: null })}
+                onConfirm={confirmDelete}
+                title="Konfirmasi Hapus"
+                message={`Apakah Anda yakin ingin menghapus produk "${confirmModal.product?.name}"?`}
+                confirmText="Hapus"
+                cancelText="Batal"
+                confirmStyle="danger"
+            />
+
+            {/* Alert Modal */}
+            <AlertModal
+                isOpen={alertModal.isOpen}
+                onClose={() => setAlertModal({ isOpen: false, message: '', type: 'info', title: 'Notifikasi' })}
+                title={alertModal.title}
+                message={alertModal.message}
+                type={alertModal.type}
+            />
         </div>
     );
 };

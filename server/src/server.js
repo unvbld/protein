@@ -7,6 +7,7 @@ import authRoutes from './routes/auth.js';
 import productRoutes from './routes/products.js';
 import posRoutes from './routes/pos.js';
 import dashboardRoutes from './routes/dashboard.js';
+import categoryRoutes from './routes/category.js';
 
 dotenv.config();
 
@@ -18,8 +19,8 @@ app.use(cors({
     origin: process.env.CORS_ORIGIN || 'http://localhost:5173',
     credentials: true
 }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware
 app.use((req, res, next) => {
@@ -41,6 +42,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/pos', posRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/categories', categoryRoutes);
 
 // 404 handler
 app.use((req, res) => {

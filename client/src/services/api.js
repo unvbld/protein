@@ -69,4 +69,13 @@ export const dashboard = {
     getLowStock: (threshold) => apiClient.get('/dashboard/low-stock', { params: { threshold } })
 };
 
+// Categories API
+export const categories = {
+    getAll: () => apiClient.get('/categories'),
+    getById: (id) => apiClient.get(`/categories/${id}`),
+    create: (data) => apiClient.post('/categories', data),
+    update: (id, data) => apiClient.put(`/categories/${id}`, data),
+    delete: (id) => apiClient.delete(`/categories/${id}`)
+};
+
 export default apiClient;

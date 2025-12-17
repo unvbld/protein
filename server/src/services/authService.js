@@ -18,10 +18,11 @@ export async function login(username, password) {
         // Get user information
         const userInfo = await odooClient.getUserInfo(uid);
 
-        // Determine user role based on Odoo groups
+        // Determine user role based on Odoo MANAGER groups only
+        // Inventory/User does NOT get admin role (only Inventory/Manager does)
         let role = 'kasir'; // Default role
 
-        // Check if user is admin/manager
+        // Check if user is Manager (not just User)
         const isInventoryManager = await odooClient.userHasGroup(uid, 'stock.group_stock_manager');
         const isPosManager = await odooClient.userHasGroup(uid, 'point_of_sale.group_pos_manager');
 
@@ -69,7 +70,7 @@ export async function getCurrentUser(userId) {
 
         const userInfo = await odooClient.getUserInfo(userId);
 
-        // Determine role
+        // Determine role - only Manager groups get admin
         let role = 'kasir';
         const isInventoryManager = await odooClient.userHasGroup(userId, 'stock.group_stock_manager');
         const isPosManager = await odooClient.userHasGroup(userId, 'point_of_sale.group_pos_manager');
