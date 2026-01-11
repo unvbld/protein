@@ -143,6 +143,18 @@ const POS = () => {
         return paid - total;
     };
 
+    const handleNumpadClick = (value) => {
+        if (value === 'clear') {
+            setAmountPaid('');
+        } else if (value === 'backspace') {
+            setAmountPaid(amountPaid.slice(0, -1));
+        } else if (value === '000') {
+            setAmountPaid(amountPaid + '000');
+        } else {
+            setAmountPaid(amountPaid + value);
+        }
+    };
+
     const handleCheckout = () => {
         if (cart.length === 0) {
             setAlertModal({
@@ -569,6 +581,69 @@ const POS = () => {
                                 <strong className={getChange() < 0 ? 'text-danger' : 'text-success'}>
                                     Rp {Math.max(0, getChange()).toLocaleString('id-ID')}
                                 </strong>
+                            </div>
+
+                            <div className="payment-numpad">
+                                <div className="numpad-grid">
+                                    {['7', '8', '9'].map(num => (
+                                        <button
+                                            key={num}
+                                            className="numpad-btn"
+                                            onClick={() => handleNumpadClick(num)}
+                                            disabled={processing}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                    {['4', '5', '6'].map(num => (
+                                        <button
+                                            key={num}
+                                            className="numpad-btn"
+                                            onClick={() => handleNumpadClick(num)}
+                                            disabled={processing}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                    {['1', '2', '3'].map(num => (
+                                        <button
+                                            key={num}
+                                            className="numpad-btn"
+                                            onClick={() => handleNumpadClick(num)}
+                                            disabled={processing}
+                                        >
+                                            {num}
+                                        </button>
+                                    ))}
+                                    <button
+                                        className="numpad-btn numpad-special"
+                                        onClick={() => handleNumpadClick('clear')}
+                                        disabled={processing}
+                                    >
+                                        C
+                                    </button>
+                                    <button
+                                        className="numpad-btn"
+                                        onClick={() => handleNumpadClick('0')}
+                                        disabled={processing}
+                                    >
+                                        0
+                                    </button>
+                                    <button
+                                        className="numpad-btn numpad-special"
+                                        onClick={() => handleNumpadClick('backspace')}
+                                        disabled={processing}
+                                    >
+                                        ⌫
+                                    </button>
+                                    <button
+                                        className="numpad-btn numpad-wide"
+                                        onClick={() => handleNumpadClick('000')}
+                                        disabled={processing}
+                                    >
+                                        000
+                                    </button>
+                                </div>
                             </div>
                         </div>
 

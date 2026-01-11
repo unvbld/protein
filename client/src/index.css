@@ -910,6 +910,72 @@ body {
   cursor: not-allowed;
 }
 
+/* Payment Numpad */
+.payment-numpad {
+  margin: 1.5rem 0;
+}
+
+.numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.numpad-btn {
+  padding: 1.25rem;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: white;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 1.25rem;
+  transition: all 0.2s;
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.numpad-btn:hover:not(:disabled) {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+}
+
+.numpad-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.numpad-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.numpad-btn.numpad-special {
+  background: #f1f5f9;
+  color: var(--danger);
+  font-weight: 800;
+}
+
+.numpad-btn.numpad-special:hover:not(:disabled) {
+  background: var(--danger);
+  color: white;
+  border-color: var(--danger);
+}
+
+.numpad-btn.numpad-wide {
+  grid-column: span 3;
+  background: var(--success);
+  color: white;
+  border-color: var(--success);
+}
+
+.numpad-btn.numpad-wide:hover:not(:disabled) {
+  background: #059669;
+  border-color: #059669;
+}
+
 /* Modal Overlay */
 .modal-overlay {
   position: fixed;
